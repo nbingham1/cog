@@ -9,8 +9,8 @@ TEST_DEPS    := $(TEST_OBJECTS:.o=.d)
 GTEST        := ../googletest
 GTEST_I      := -I$(GTEST)/include -I.
 GTEST_L      := -L$(GTEST) -L.
-TARGET		   = llcog
-TEST_TARGET  = test_llcog
+TARGET		   = cog
+TEST_TARGET  = test_cog
 
 -include $(DEPS)
 -include $(TEST_DEPS)
