@@ -1,4 +1,5 @@
-CXXFLAGS	   =  -g -O2 -Wall -fmessage-length=0 -Isrc `llvm-config-5.0 --libs core native --cxxflags --ldflags`
+LLVMFLAGS    := $(shell llvm-config-5.0 --libs core native --cxxflags --ldflags)
+CXXFLAGS	   =  -g -O2 -Wall -fmessage-length=0 -Isrc $(LLVMFLAGS)
 # -g -fprofile-arcs -ftest-coverage
 SOURCES		   := $(wildcard src/*.cpp)
 TESTS        := $(wildcard test/*.cpp)

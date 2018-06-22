@@ -11,6 +11,7 @@ CogCompiler::~CogCompiler()
 
 void CogCompiler::loadFile(string filename)
 {
+	
 	module = new Module(filename, context);
 	source = filename;
 }
@@ -69,9 +70,15 @@ bool CogCompiler::emit(TargetMachine::CodeGenFileType fileType)
 	if (this->targetTriple == "")
 		setTarget();
 
-  auto Filename = "output.o";
+	size_t typeindex = source.find_last_of(".");
+	string filename = source.substr(0, typeindex);
+	if (fileType == TargetMachine::CGFT_AssemblyFile)
+		filename += ".s";
+	else
+		filename += ".o";
+
   std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::F_None);
+  raw_fd_ostream dest(filename, EC, sys::fs::F_None);
 
   if (EC) {
     errs() << "Could not open file: " << EC.message();
@@ -88,7 +95,7 @@ bool CogCompiler::emit(TargetMachine::CodeGenFileType fileType)
   pass.run(*module);
   dest.flush();
 
-  outs() << "Wrote " << Filename << "\n";
+  outs() << "Wrote " << filename << "\n";
 
   return true;
 }

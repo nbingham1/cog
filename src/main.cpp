@@ -7,7 +7,7 @@ int main()
 {
 	CogCompiler compiler;
 
-	compiler.loadFile("main");
+	compiler.loadFile("main.cog");
 
 	Function *_start;
 	BasicBlock *_startBody;
@@ -25,6 +25,7 @@ int main()
 	ReturnInst::Create(compiler.context, _startBody);
 	
 	compiler.setTarget();
+	compiler.emit(TargetMachine::CGFT_AssemblyFile);
 	compiler.emit();
 	
   return 0;
