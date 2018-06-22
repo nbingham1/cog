@@ -38,6 +38,7 @@ struct CogCompiler
 	~CogCompiler();
 
 	LLVMContext context;
+	IRBuilder<> builder;
 	string targetTriple;
 	TargetMachine *target;
 	Module *module;

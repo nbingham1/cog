@@ -1,27 +1,21 @@
-%token INTEGER IDENTIFIER CONSTANT
+%token TYPENAME IDENTIFIER CONSTANT
 %token IF ELSE WHILE
 %left '+' '-'
 %left '*' '/'
 %union
 {
-	int intValue;
-	char *strValue;
+	Info *info;
 }
 
 %{
 #include <stdio.h>
-#include <std/hash_map.h>
-#include <std/string.h>
+
 void yyerror(char *);
 int yylex(void);
 
 extern FILE* yyin;
 extern int line;
 extern int column;
-
-typedef core::hash_map<core::string, int>::iterator symbol_key;
-core::hash_map<core::string, int> symbol_index;
-core::array<int> symbol_table;
 
 %}
 %%
@@ -166,9 +160,3 @@ void yyerror(char *s) {
 	fprintf(stderr, "%d:%d: %s, found '%c'\n", line, column, s, yychar);
 }
 
-int main(int argc, char **argv) {
-	yyin = fopen(argv[1], "r");
-	yyparse();
-	fclose(yyin);
-	return 0;
-}

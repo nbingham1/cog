@@ -8,6 +8,7 @@ d			[0-9]
 %{
 #include <stdlib.h>
 #include "y.tab.h"
+#include "Lang.h"
 
 void yyerror(char*);
 
@@ -22,16 +23,16 @@ int line = 0;
 "while"								{ column += yyleng; return WHILE; }
 
 	/* primitive types */
-int										{ column += yyleng; return INTEGER; }
+int										{ column += yyleng; yylval = getTypename(yytext, yyleng); return TYPENAME; }
 	/* u?int({d}*)						{ return INTEGER; } */
 	/* float(16|32|64|80|128)	{ return FLOAT; } */
 	/* u?fixed({d}*)					{ return FIXED; } */
 
 	/* constants */
-{l}({l}|{d})*					{ column += yyleng; yylval.strValue = strdup(yytext); return IDENTIFIER; }
+{l}({l}|{d})*					{ column += yyleng; yylval = getIdentifier(yytext, yyleng); return IDENTIFIER; }
 	/* 0[xX]{x}+{is}?					{ return CONSTANT; } */
 	/* {d}+{is}?							{ return CONSTANT; } */
-{d}+									{ column += yyleng; yylval.intValue = atoi(yytext); return CONSTANT; }
+{d}+									{ column += yyleng; yylval = getConstant(yytext, yyleng); return CONSTANT; }
 
 	/* {d}+{e}{fs}?						{ return CONSTANT; }
 {d}*"."{d}+{e}?{fs}?	{ return CONSTANT; }

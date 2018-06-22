@@ -1,13 +1,19 @@
-#include "CogCompiler.h"
+#include "Compiler.h"
+#include "y.tab.h"
 
 #include <vector>
 using std::vector;
 
-int main()
+int main(int argc, char **argv)
 {
 	CogCompiler compiler;
 
 	compiler.loadFile("main.cog");
+
+	yyin = fopen(argv[1], "r");
+	yyparse();
+	fclose(yyin);
+
 
 	Function *_start;
 	BasicBlock *_startBody;

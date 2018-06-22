@@ -1,22 +1,25 @@
-#include "CogCompiler.h"
+#include "Compiler.h"
 
-CogCompiler::CogCompiler()
+namespace Cog
+{
+
+Compiler::Compiler() : builder(context)
 {
 	targetTriple = "";
 }
 
-CogCompiler::~CogCompiler()
+Compiler::~Compiler()
 {
 }
 
-void CogCompiler::loadFile(string filename)
+void Compiler::loadFile(string filename)
 {
 	
 	module = new Module(filename, context);
 	source = filename;
 }
 
-bool CogCompiler::setTarget(string targetTriple)
+bool Compiler::setTarget(string targetTriple)
 {
 	if (!module) {
 		errs() << "Module not yet initialized";
@@ -50,7 +53,7 @@ bool CogCompiler::setTarget(string targetTriple)
 }
 
 
-void CogCompiler::createExit(BasicBlock *body, Value *ret)
+void Compiler::createExit(BasicBlock *body, Value *ret)
 {
 	vector<Type*> argTypes;
 	vector<Value*> argValues;
@@ -65,7 +68,7 @@ void CogCompiler::createExit(BasicBlock *body, Value *ret)
 	CallInst::Create(asmIns, argValues, "", body);
 }
 
-bool CogCompiler::emit(TargetMachine::CodeGenFileType fileType)
+bool Compiler::emit(TargetMachine::CodeGenFileType fileType)
 {
 	if (this->targetTriple == "")
 		setTarget();
@@ -100,3 +103,4 @@ bool CogCompiler::emit(TargetMachine::CodeGenFileType fileType)
   return true;
 }
 
+}

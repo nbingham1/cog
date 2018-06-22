@@ -23,34 +23,28 @@ bool operator>=(Typename t1, Typename t2);
 bool operator==(Typename t1, Typename t2);
 bool operator!=(Typename t1, Typename t2);
 
-struct Symbol;
-
-struct SymbolTable
-{
-	vector<Symbol> symbols;
-};
-
 struct Symbol
 {
+	int scope;
 	Typename type;
 	string name;
-	
-	SymbolTable table;
-};
 
-struct ScopeStack
-{
-	vector<SymbolTable> tables;
+	Value *value;
 };
 
 struct Type
 {
-	SymbolTable table;
+	vector<Symbol> symbols;
 };
 
-struct TypeTable
+struct Info
 {
-	map<Typename, Type> types;
+	Info();
+	~Info();
+
+	Typename type;
+	Value *constant;
+	int symbol;
 };
 
 }
