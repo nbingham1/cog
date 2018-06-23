@@ -1,6 +1,5 @@
 %{
-#include "y.tab.h"
-#include "Lang.h"
+#include "Parser.y.h"
 
 void yyerror(char*);
 
@@ -23,16 +22,16 @@ d			[0-9]
 "while"								{ column += yyleng; return WHILE; }
 
 	/* primitive types */
-int										{ column += yyleng; yylval = strndup(yytext, yyleng); return TYPENAME; }
+int										{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return TYPENAME; }
 	/* u?int({d}*)						{ return INTEGER; } */
 	/* float(16|32|64|80|128)	{ return FLOAT; } */
 	/* u?fixed({d}*)					{ return FIXED; } */
 
 	/* constants */
-{l}({l}|{d})*					{ column += yyleng; yylval = strndup(yytext, yyleng); return IDENTIFIER; }
+{l}({l}|{d})*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
 	/* 0[xX]{x}+{is}?					{ return CONSTANT; } */
 	/* {d}+{is}?							{ return CONSTANT; } */
-{d}+									{ column += yyleng; yylval = strndup(yytext, yyleng); return CONSTANT; }
+{d}+									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return CONSTANT; }
 
 	/* {d}+{e}{fs}?						{ return CONSTANT; }
 {d}*"."{d}+{e}?{fs}?	{ return CONSTANT; }

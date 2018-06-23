@@ -7,12 +7,12 @@
 namespace Cog
 {
 
-extern Compiler compiler;
+extern Compiler cog;
 
 Info *getConstant(char *txt)
 {
 	Info *result = new Info();
-	result->value = ConstantInt::get(compiler.context, APInt(32, atoi(txt), true));
+	result->value = ConstantInt::get(cog.context, APInt(32, atoi(txt), true));
 	result->type = result->value->getType();
 	delete txt;
 	return result;
@@ -20,10 +20,10 @@ Info *getConstant(char *txt)
 
 Info *getTypename(char *txt)
 {
-	for (int i = 0; i < (int)types.size(); i++) {
-		if (strcmp(types[i].name.c_str(), txt) == 0) {
+	for (int i = 0; i < (int)cog.types.size(); i++) {
+		if (strcmp(cog.types[i].name.c_str(), txt) == 0) {
 			Info *result = new Info();
-			result->type = types[i].type;
+			result->type = cog.types[i].type;
 			delete txt;
 			return result;
 		}
@@ -35,12 +35,12 @@ Info *getTypename(char *txt)
 
 Info *getIdentifier(char *txt)
 {
-	for (int i = (int)symbols.size()-1; i >= 0; i--) {
-		if (strcmp(symbols[i].name.c_str(), txt) == 0) {
+	for (int i = (int)cog.symbols.size()-1; i >= 0; i--) {
+		if (strcmp(cog.symbols[i].name.c_str(), txt) == 0) {
 			Info *result = new Info();
 			result->symbol = i;
-			result->value = symbols[i].value;
-			result->type = result.value->getType();
+			result->value = cog.symbols[i].value;
+			result->type = result->value->getType();
 			delete txt;
 			return result;
 		}
@@ -55,7 +55,7 @@ Info *unaryOperator(int op, Info *arg)
 	if (arg) {
 		switch (op) {
 			case '-':
-				arg->value = compiler.builder.CreateNeg(arg->value);
+				arg->value = cog.builder.CreateNeg(arg->value);
 				arg->type = arg->value->getType();
 				arg->symbol = -1;
 				return arg;
@@ -72,22 +72,22 @@ Info *binaryOperator(Info *left, int op, Info *right)
 	if (left && right) {
 		switch (op) {
 		case '+':
-			left->value = compiler.builder.CreateAdd(left->value, right->value);
+			left->value = cog.builder.CreateAdd(left->value, right->value);
 			left->type = left->value->getType();
 			delete right;
 			return left;
 		case '-':
-			left->value = compiler.builder.CreateSub(left->value, right->value);
+			left->value = cog.builder.CreateSub(left->value, right->value);
 			left->type = left->value->getType();
 			delete right;
 			return left;
 		case '*':
-			left->value = compiler.builder.CreateMul(left->value, right->value);
+			left->value = cog.builder.CreateMul(left->value, right->value);
 			left->type = left->value->getType();
 			delete right;
 			return left;
 		case '/':
-			left->value = compiler.builder.CreateSDiv(left->value, right->value);
+			left->value = cog.builder.CreateSDiv(left->value, right->value);
 			left->type = left->value->getType();
 			delete right;
 			return left;
@@ -105,18 +105,18 @@ Info *binaryOperator(Info *left, int op, Info *right)
 	}
 }
 
-void declareSymbol(Info *type, char *name)
+void declareSymbol(Info *type, char *txt)
 {
 	if (type && txt) {
-		for (int i = (int)symbols.size()-1; i >= 0; i--) {
-			if (strcmp(symbols[i].name.c_str(), txt) == 0) {
+		for (int i = (int)cog.symbols.size()-1; i >= 0; i--) {
+			if (strcmp(cog.symbols[i].name.c_str(), txt) == 0) {
 				// already defined
 			}
 		}
 
-		symbols.push_back(Cog::Symbol());
-		symbols.back().name = txt;
-		symbols.back().value = UndefValue::get(type->type);
+		cog.symbols.push_back(Cog::Symbol());
+		cog.symbols.back().name = txt;
+		cog.symbols.back().value = UndefValue::get(type->type);
 		delete type;
 		delete txt;
 	} else {
@@ -132,7 +132,7 @@ void assignSymbol(Info *symbol, Info *value)
 {
 	if (symbol && value) {
 		if (symbol->type == value->type) {
-			symbols[symbol->symbol].value = value->value;
+			cog.symbols[symbol->symbol].value = value->value;
 		} else {
 			// typecheck failed
 		}

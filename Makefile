@@ -1,42 +1,52 @@
 LLVMFLAGS    := $(shell llvm-config-5.0 --libs core native --cxxflags --ldflags)
 CXXFLAGS      =  -g -O2 -Wall -fmessage-length=0 -Isrc $(LLVMFLAGS)
 # -g -fprofile-arcs -ftest-coverage
-LEXERS       := $(wildcard src/*.l)
-PARSERS      := $(wildcard src/*.y)
-SOURCES      := $(wildcard src/*.cpp) $(wildcard src/*.c) $(PARSERS:%.y=%.c) $(LEXERS:%.l=%.c)
-TESTS        := $(wildcard test/*.cpp)
-OBJECTS      := $(SOURCES:%.cpp=%.o)
-TEST_OBJECTS := $(TESTS:.c*=.o)
-DEPS         := $(OBJECTS:.o=.d)
-TEST_DEPS    := $(TEST_OBJECTS:.o=.d)
+LEX          := $(wildcard src/*.l)
+YACC         := $(wildcard src/*.y)
+PSOURCES     := $(LEX:=.cpp) $(YACC:=.cpp)
+POBJECTS     := $(LEX:=.o) $(YACC:=.o)
+CSOURCES     := $(wildcard src/*.cpp)
+COBJECTS     := $(CSOURCES:%.cpp=%.o)
+SOURCES      := $(PSOURCES) $(CSOURCES)
+OBJECTS      := $(POBJECTS) $(COBJECTS)
+DEPS         := $(OBJECTS:%.o=%.d)
+TARGET        = cog
+
+TSOURCES     := $(wildcard test/*.cpp)
+TOBJECTS     := $(TSOURCES:%.cpp=%.o)
+TDEPS        := $(TOBJECTS:%.o=%.d)
 GTEST        := ../googletest
 GTEST_I      := -I$(GTEST)/include -I.
 GTEST_L      := -L$(GTEST) -L.
-TARGET        = cog
-TEST_TARGET   = test_cog
+TTARGET       = test_cog
 
 -include $(DEPS)
--include $(TEST_DEPS)
+-include $(TDEPS)
 
-all:
-	#$(TARGET)
-	echo $(SOURCES)
+all: $(PSOURCES) $(TARGET)
 
-test: $(TARGET) $(TEST_TARGET)
+test: $(TARGET) $(TTARGET)
 
 check: test
-	./$(TEST_TARGET)
+	./$(TTARGET)
 
 $(TARGET): $(OBJECTS)
 	g++ $(CXXFLAGS) $^ -o $@
 
-src/%.c: src/%.l
+src/%.l.c: src/%.l
 	lex -o $@ $<
 
-src/%.c: src/%.y
-	yacc -d -o $@ $<
+src/%.y.c: src/%.y
+	bison -y -d -o $@ $<
+
+src/%.cpp: src/%.c
+	mv $< $@
 
 src/%.o: src/%.cpp 
+	$(CXX) $(CXXFLAGS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+src/%.o: src/%.c 
 	$(CXX) $(CXXFLAGS) -MM -MF $(patsubst %.o,%.d,$@) -MT $@ -c $<
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
@@ -51,8 +61,7 @@ test/gtest_main.o: $(GTEST)/src/gtest_main.cc
 	$(CXX) $(CXXFLAGS) $(GTEST_I) $< -c -o $@
 
 clean:
-	rm -f $(LEXERS:%.l=%.c) $(LEXERS:%.l=%.h)
-	rm -f $(PARSERS:%.y=%.c) $(PARSERS:%.y=%.h)
+	rm -f src/*.y.* src/*.l.*
 	rm -f src/*.o test/*.o
 	rm -f src/*.d test/*.d
 	rm -f src/*.gcda test/*.gcda

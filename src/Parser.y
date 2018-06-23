@@ -1,18 +1,15 @@
-%{
-#pragma once
-
-#include <stdio.h>
+%code requires {
 #include "Lang.h"
+}
+%{
+#include "Parser.y.h"
 
+void yyerror(const char *s);
 int yylex(void);
 
 extern FILE* yyin;
 extern int line;
 extern int column;
-
-void yyerror(char *s) {
-	fprintf(stderr, "%d:%d: %s, found '%c'\n", line, column, s, yychar);
-}
 
 %}
 
@@ -110,4 +107,8 @@ add_operator
 	;
 
 %%
+
+void yyerror(const char *s) {
+	fprintf(stderr, "%d:%d: %s, found '%c'\n", line, column, s, yychar);
+}
 
