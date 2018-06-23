@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <string.h>
 
+extern Cog::Compiler cog;
+
 namespace Cog
 {
-
-extern Compiler cog;
 
 Info *getConstant(char *txt)
 {

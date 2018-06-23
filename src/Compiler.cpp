@@ -1,5 +1,7 @@
 #include "Compiler.h"
 
+using namespace std;
+
 namespace Cog
 {
 
