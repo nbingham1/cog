@@ -1,12 +1,4 @@
-l			[a-zA-Z_]
-d			[0-9]
-	/* x			[a-fA-F0-9] */
-	/* e			[Ee][-+]?{d}+ */
-	/* is		(u|i)({d}*) */
-	/* fs		f(32|64) */
-
 %{
-#include <stdlib.h>
 #include "y.tab.h"
 #include "Lang.h"
 
@@ -15,6 +7,14 @@ void yyerror(char*);
 int column = 0;
 int line = 0;
 %}
+
+l			[a-zA-Z_]
+d			[0-9]
+	/* x			[a-fA-F0-9] */
+	/* e			[Ee][-+]?{d}+ */
+	/* is		(u|i)({d}*) */
+	/* fs		f(32|64) */
+
 %%
 
 	/* keywords */
@@ -23,16 +23,16 @@ int line = 0;
 "while"								{ column += yyleng; return WHILE; }
 
 	/* primitive types */
-int										{ column += yyleng; yylval = getTypename(yytext, yyleng); return TYPENAME; }
+int										{ column += yyleng; yylval = strndup(yytext, yyleng); return TYPENAME; }
 	/* u?int({d}*)						{ return INTEGER; } */
 	/* float(16|32|64|80|128)	{ return FLOAT; } */
 	/* u?fixed({d}*)					{ return FIXED; } */
 
 	/* constants */
-{l}({l}|{d})*					{ column += yyleng; yylval = getIdentifier(yytext, yyleng); return IDENTIFIER; }
+{l}({l}|{d})*					{ column += yyleng; yylval = strndup(yytext, yyleng); return IDENTIFIER; }
 	/* 0[xX]{x}+{is}?					{ return CONSTANT; } */
 	/* {d}+{is}?							{ return CONSTANT; } */
-{d}+									{ column += yyleng; yylval = getConstant(yytext, yyleng); return CONSTANT; }
+{d}+									{ column += yyleng; yylval = strndup(yytext, yyleng); return CONSTANT; }
 
 	/* {d}+{e}{fs}?						{ return CONSTANT; }
 {d}*"."{d}+{e}?{fs}?	{ return CONSTANT; }

@@ -1,40 +1,31 @@
 #pragma once
 
-#include "CogSymbol.h"
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Value.h>
+
+#include <string>
 
 namespace Cog
 {
 
-struct Typename
-{
-	/*bool canWrite;
-	bool canRead;
-	Typename retType;
-	Typename recvType;*/
-	string id;
-	/*vector<Typename> argList;
-	int ptrCount;*/
-};
-
-bool operator<(Typename t1, Typename t2);
-bool operator>(Typename t1, Typename t2);
-bool operator<=(Typename t1, Typename t2);
-bool operator>=(Typename t1, Typename t2);
-bool operator==(Typename t1, Typename t2);
-bool operator!=(Typename t1, Typename t2);
-
 struct Symbol
 {
-	int scope;
-	Typename type;
-	string name;
+	Symbol();
+	~Symbol();
 
-	Value *value;
+	int scope;
+	std::string name;
+
+	llvm::Value *value;
 };
 
-struct Type
+struct Typename
 {
-	vector<Symbol> symbols;
+	Typename();
+	~Typename();
+
+	std::string name;
+	llvm::Type *type;
 };
 
 struct Info
@@ -42,8 +33,8 @@ struct Info
 	Info();
 	~Info();
 
-	Typename type;
-	Value *constant;
+	llvm::Type *type;
+	llvm::Value *value;
 	int symbol;
 };
 

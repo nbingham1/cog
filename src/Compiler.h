@@ -26,29 +26,38 @@
 
 #include <llvm/Support/CodeGen.h>
 
+#include <vector>
 #include <string>
 
-using namespace std;
+#include "Info.h"
+
 using namespace llvm;
 using namespace llvm::sys;
 
-struct CogCompiler
+namespace Cog
 {
-	CogCompiler();
-	~CogCompiler();
+
+struct Compiler
+{
+	Compiler();
+	~Compiler();
 
 	LLVMContext context;
 	IRBuilder<> builder;
-	string targetTriple;
+	std::string targetTriple;
 	TargetMachine *target;
 	Module *module;
-	string source;
+	std::string source;
 
-	void loadFile(string filename);
+	std::vector<Symbol> symbols;
+	std::vector<Typename> types;
 
-	bool setTarget(string targetTriple = sys::getDefaultTargetTriple());	
+	void loadFile(std::string filename);
+
+	bool setTarget(std::string targetTriple = sys::getDefaultTargetTriple());	
 	void createExit(BasicBlock *body, Value *ret = NULL);
 	
 	bool emit(TargetMachine::CodeGenFileType fileType = TargetMachine::CGFT_ObjectFile);
 };
 
+}

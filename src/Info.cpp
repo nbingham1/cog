@@ -3,39 +3,29 @@
 namespace Cog
 {
 
-bool operator<(Typename t1, Typename t2)
+Symbol::Symbol()
 {
-	return t1.id < t2.id;
+	scope = -1;
+	value = NULL;
 }
 
-bool operator>(Typename t1, Typename t2)
+Symbol::~Symbol()
 {
-	return t1.id > t2.id;
 }
 
-bool operator<=(Typename t1, Typename t2)
+Typename::Typename()
 {
-	return t1.id <= t2.id;
+	type = NULL;
 }
 
-bool operator>=(Typename t1, Typename t2)
+Typename::~Typename()
 {
-	return t1.id >= t2.id;
-}
-
-bool operator==(Typename t1, Typename t2)
-{
-	return t1.id == t2.id;
-}
-
-bool operator!=(Typename t1, Typename t2)
-{
-	return t1.id != t2.id;
 }
 
 Info::Info()
 {
-	constant = NULL;
+	type = NULL;
+	value = NULL;
 	symbol = -1;
 }
 

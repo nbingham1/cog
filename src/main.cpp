@@ -4,16 +4,15 @@
 #include <vector>
 using std::vector;
 
+Cog::Compiler compiler;
+
 int main(int argc, char **argv)
 {
-	CogCompiler compiler;
-
 	compiler.loadFile("main.cog");
 
 	yyin = fopen(argv[1], "r");
 	yyparse();
 	fclose(yyin);
-
 
 	Function *_start;
 	BasicBlock *_startBody;
