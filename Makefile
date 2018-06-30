@@ -1,4 +1,5 @@
-LLVMFLAGS    := $(shell llvm-config-5.0 --libs core native --cxxflags --ldflags)
+LLVMFLAGS    := $(shell llvm-config-5.0 --cxxflags --ldflags)
+LLVMLIBS     := $(shell llvm-config-5.0 --libs core mcjit native) 
 CXXFLAGS      =  -g -O2 -Wall -fmessage-length=0 -Isrc $(LLVMFLAGS)
 # -g -fprofile-arcs -ftest-coverage
 LEX          := $(wildcard src/*.l)
@@ -31,7 +32,7 @@ check: test
 	./$(TTARGET)
 
 $(TARGET): $(OBJECTS)
-	g++ $(CXXFLAGS) $^ -o $@
+	g++ $(CXXFLAGS) $^ $(LLVMLIBS) -o $@
 
 src/%.l.c: src/%.l
 	lex -o $@ $<

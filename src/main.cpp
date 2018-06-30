@@ -9,29 +9,27 @@ extern FILE* yyin;
 
 int main(int argc, char **argv)
 {
-	cog.loadFile("main.cog");
+	if (argc != 2)
+		return 1;
+
+	cog.loadFile(argv[1]);
+
+	/* Create the top level interpreter function to call as entry */
+	vector<Type*> argTypes;
+	FunctionType *ftype = FunctionType::get(Type::getVoidTy(cog.context), argTypes, false);
+	Function *_start = Function::Create(ftype, GlobalValue::ExternalLinkage, "_start", cog.module);
+	BasicBlock *_startBody = BasicBlock::Create(cog.context, "entry", _start, 0);
+	cog.scopes.push_back(Cog::Scope(_startBody));
+	cog.builder.SetInsertPoint(_startBody);
 
 	yyin = fopen(argv[1], "r");
 	yyparse();
 	fclose(yyin);
 
-	Function *_start;
-	BasicBlock *_startBody;
+	//cog.module->print(llvm::errs(), nullptr, false, true);
 
-	/* Create the top level interpreter function to call as entry */
-	{
-		vector<Type*> argTypes;
-		FunctionType *ftype = FunctionType::get(Type::getVoidTy(cog.context), argTypes, false);
-		_start = Function::Create(ftype, GlobalValue::ExternalLinkage, "_start", cog.module);
-		_startBody = BasicBlock::Create(cog.context, "entry", _start, 0);
-	}
-
-	cog.createExit(_startBody);
-
-	ReturnInst::Create(cog.context, _startBody);
-	
 	cog.setTarget();
-	cog.emit(TargetMachine::CGFT_AssemblyFile);
+	//cog.emit(TargetMachine::CGFT_AssemblyFile);
 	cog.emit();
 	
   return 0;

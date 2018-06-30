@@ -23,6 +23,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/IR/InlineAsm.h>
+#include <llvm/IR/NoFolder.h>
 
 #include <llvm/Support/CodeGen.h>
 
@@ -43,19 +44,27 @@ struct Compiler
 	~Compiler();
 
 	LLVMContext context;
-	IRBuilder<> builder;
+	IRBuilder<llvm::NoFolder> builder;
 	std::string targetTriple;
 	TargetMachine *target;
 	Module *module;
 	std::string source;
+	Function *func;
 
-	std::vector<Symbol> symbols;
 	std::vector<Typename> types;
+	std::vector<Scope> scopes;
+
+	void printScope();
+	Scope* getScope();
+	void pushScope();
+	void popScope();
+	Symbol *findSymbol(std::string name);
+	Symbol *createSymbol(std::string name, llvm::Type *type);
+
 
 	void loadFile(std::string filename);
-
 	bool setTarget(std::string targetTriple = sys::getDefaultTargetTriple());	
-	void createExit(BasicBlock *body, Value *ret = NULL);
+	void createExit(Value *ret = NULL);
 	
 	bool emit(TargetMachine::CodeGenFileType fileType = TargetMachine::CGFT_ObjectFile);
 };

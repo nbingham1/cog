@@ -12,5 +12,16 @@ Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);
 void declareSymbol(Info *type, char *name);
 void assignSymbol(Info *symbol, Info *value);
+void callFunction(char *txt);
+void returnValue(Info *value);
+void returnVoid();
+void pushScope();
+void popScope();
+
+void ifCondition(Info *cond);
+void elseifCondition();
+void elseCondition();
+void ifStatement();
 
 }
+

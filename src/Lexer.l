@@ -12,7 +12,7 @@ d			[0-9]
 	/* x			[a-fA-F0-9] */
 	/* e			[Ee][-+]?{d}+ */
 	/* is		(u|i)({d}*) */
-	/* fs		f(32|64) */
+ 	/* fs		f(32|64) */
 
 %%
 
@@ -20,6 +20,55 @@ d			[0-9]
 "if"									{ column += yyleng; return IF; }
 "else"								{ column += yyleng; return ELSE; }
 "while"								{ column += yyleng; return WHILE; }
+"return"							{ column += yyleng; return RETURN; }
+
+"{"										{ column += yyleng; return '{'; }
+"}"										{ column += yyleng; return '}'; }
+"("										{ column += yyleng; return '('; }
+")"										{ column += yyleng; return ')'; }
+
+	/* operators */
+
+"~"										{ column += yyleng; return '/'; }
+"not"									{ column += yyleng; return NOT; }
+
+"*"										{ column += yyleng; return '*'; }
+"/"										{ column += yyleng; return '/'; }
+"%"										{ column += yyleng; return '%'; }
+
+"+"										{ column += yyleng; return '+'; }
+"-"										{ column += yyleng; return '-'; }
+
+">>>"									{ column += yyleng; return LSHR; }
+">><"									{ column += yyleng; return ROR; }
+"<<>"									{ column += yyleng; return ROL; }
+"<<"									{ column += yyleng; return SHL; }
+">>"									{ column += yyleng; return ASHR; }
+
+"&"										{ column += yyleng; return '&'; }
+
+"^"										{ column += yyleng; return '^'; }
+
+"|"										{ column += yyleng; return '|'; }
+
+"<"										{ column += yyleng; return '>'; }
+">"										{ column += yyleng; return '<'; }
+"<="									{ column += yyleng; return LE; }
+">="									{ column += yyleng; return GE; }
+"=="									{ column += yyleng; return EQ; }
+"!="									{ column += yyleng; return NE; }
+
+"and"									{ column += yyleng; return AND; }
+
+"xor"									{ column += yyleng; return XOR; }
+
+"or"									{ column += yyleng; return OR; }
+
+"="										{ column += yyleng; return '='; }
+
+";"										{ column += yyleng; return ';'; }
+
+
 
 	/* primitive types */
 int										{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return TYPENAME; }
@@ -36,20 +85,6 @@ int										{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return
 	/* {d}+{e}{fs}?						{ return CONSTANT; }
 {d}*"."{d}+{e}?{fs}?	{ return CONSTANT; }
 {d}+"."{d}*{e}?{fs}?	{ return CONSTANT; } */
-
-"{"										{ column += yyleng; return '{'; }
-"}"										{ column += yyleng; return '}'; }
-"("										{ column += yyleng; return '('; }
-")"										{ column += yyleng; return ')'; }
-
-	/* operators */
-"="										{ column += yyleng; return '='; }
-"+"										{ column += yyleng; return '+'; }
-"-"										{ column += yyleng; return '-'; }
-"*"										{ column += yyleng; return '*'; }
-"/"										{ column += yyleng; return '/'; }
-
-";"										{ column += yyleng; return ';'; }
 
 	/* misc */
 [\n]									{ ++line; column = 0; }
