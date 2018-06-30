@@ -246,16 +246,6 @@ void returnVoid()
 	cog.builder.CreateRetVoid();
 }
 
-void pushScope()
-{
-	cog.pushScope();
-}
-
-void popScope()
-{
-	cog.popScope();
-}
-
 void ifCondition(Info *cond)
 {
 	Function *func = cog.builder.GetInsertBlock()->getParent();

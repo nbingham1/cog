@@ -5,6 +5,13 @@
 namespace Cog
 {
 
+Symbol::Symbol(std::string name, llvm::Value *value)
+{
+	this->name = name;
+	this->values.push_back(value);
+	this->curr = this->values.begin();
+}
+
 Symbol::Symbol(std::string name, llvm::Type *type)
 {
 	this->name = name;
@@ -49,6 +56,15 @@ Scope::Scope(llvm::BasicBlock *block)
 	curr = blocks.begin();
 }
 
+Scope::Scope(Scope *from)
+{
+	blocks.push_back(from->getBlock());
+	curr = blocks.begin();
+	for (std::vector<Symbol>::iterator i = from->symbols.begin(); i != from->symbols.end(); i++) {
+		symbols.push_back(Symbol(i->name, i->getValue()));
+	}
+}
+
 Scope::Scope(const Scope &copy)
 {
 	symbols = copy.symbols;
@@ -79,6 +95,14 @@ llvm::BasicBlock *Scope::getBlock()
 {
 	return *curr;
 }
+
+void Scope::merge(Scope *from)
+{
+	setBlock(from->getBlock());
+	for (int i = 0; i < (int)symbols.size() && i < (int)from->symbols.size(); i++) {
+		symbols[i].setValue(from->symbols[i].getValue());
+	}
+}	
 
 Typename::Typename()
 {

@@ -15,8 +15,6 @@ void assignSymbol(Info *symbol, Info *value);
 void callFunction(char *txt);
 void returnValue(Info *value);
 void returnVoid();
-void pushScope();
-void popScope();
 
 void ifCondition(Info *cond);
 void elseifCondition();

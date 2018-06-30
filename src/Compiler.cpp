@@ -36,7 +36,7 @@ void Compiler::pushScope()
 {
 	printf("pushScope()\n");
 	printScope();
-	scopes.push_back(Scope(getScope()->getBlock()));
+	scopes.push_back(Scope(getScope()));
 	printScope();
 }
 
@@ -44,19 +44,16 @@ void Compiler::popScope()
 {
 	printf("popScope()\n");
 	printScope();
-	BasicBlock *block = getScope()->getBlock();
+	scopes[scopes.size()-2].merge(&scopes.back());
 	scopes.pop_back();
-	getScope()->setBlock(block);
 	printScope();
 }
 
 Symbol* Compiler::findSymbol(string name)
 {
-	for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
-		for (auto symbol = scope->symbols.rbegin(); symbol != scope->symbols.rend(); ++symbol) {
-			if (symbol->name == name) {
-				return &(*symbol);
-			}
+	for (auto symbol = getScope()->symbols.rbegin(); symbol != getScope()->symbols.rend(); ++symbol) {
+		if (symbol->name == name) {
+			return &(*symbol);
 		}
 	}
 

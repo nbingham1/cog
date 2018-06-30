@@ -14,6 +14,7 @@ namespace Cog
 struct Symbol
 {
 	Symbol(std::string name, llvm::Type *type);
+	Symbol(std::string name, llvm::Value *value);
 	Symbol(const Symbol &copy);
 	~Symbol();
 
@@ -31,6 +32,7 @@ struct Symbol
 struct Scope
 {
 	Scope(llvm::BasicBlock *block);
+	Scope(Scope *from);
 	Scope(const Scope &copy);
 	~Scope();
 
@@ -41,7 +43,9 @@ struct Scope
 	void nextBlock();
 	void popBlock();
 	void setBlock(llvm::BasicBlock *block);
-	llvm::BasicBlock *getBlock();	
+	llvm::BasicBlock *getBlock();
+
+	void merge(Scope *from);	
 };
 
 struct Typename
