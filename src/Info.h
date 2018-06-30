@@ -18,6 +18,7 @@ struct Symbol
 	Symbol(const Symbol &copy);
 	~Symbol();
 
+	llvm::Type *type;
 	std::string name;
 
 	std::list<llvm::Value*> values;
@@ -41,6 +42,8 @@ struct Scope
 	std::list<llvm::BasicBlock*>::iterator curr;
 
 	void nextBlock();
+	void appendBlock(llvm::BasicBlock *block);
+	void dropBlock();
 	void popBlock();
 	void setBlock(llvm::BasicBlock *block);
 	llvm::BasicBlock *getBlock();

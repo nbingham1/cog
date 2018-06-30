@@ -7,6 +7,7 @@ namespace Cog
 
 Symbol::Symbol(std::string name, llvm::Value *value)
 {
+	this->type = value->getType();
 	this->name = name;
 	this->values.push_back(value);
 	this->curr = this->values.begin();
@@ -14,6 +15,7 @@ Symbol::Symbol(std::string name, llvm::Value *value)
 
 Symbol::Symbol(std::string name, llvm::Type *type)
 {
+	this->type = type;
 	this->name = name;
 	this->values.push_back(llvm::UndefValue::get(type));
 	this->curr = this->values.begin();
@@ -21,6 +23,7 @@ Symbol::Symbol(std::string name, llvm::Type *type)
 
 Symbol::Symbol(const Symbol &copy)
 {
+	this->type = copy.type;
 	this->name = copy.name;
 	this->values = copy.values;
 	for (curr = values.begin(); curr != values.end() && *curr != *copy.curr; ++curr);
@@ -78,11 +81,29 @@ Scope::~Scope()
 
 void Scope::nextBlock()
 {
+	for (int i = 0; i < (int)symbols.size(); i++)
+		symbols[i].nextValue();
 	++curr;
+}
+
+void Scope::appendBlock(llvm::BasicBlock *block)
+{
+	for (int i = 0; i < (int)symbols.size(); i++)
+		symbols[i].values.push_back(symbols[i].getValue());
+	blocks.push_back(block);
+}
+
+void Scope::dropBlock()
+{
+	for (int i = 0; i < (int)symbols.size(); i++)
+		symbols[i].values.pop_front();
+	blocks.pop_front();
 }
 
 void Scope::popBlock()
 {
+	for (int i = 0; i < (int)symbols.size(); i++)
+		symbols[i].popValue();
 	blocks.erase(curr++);
 }
 

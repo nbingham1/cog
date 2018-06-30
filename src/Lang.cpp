@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <llvm/ADT/Twine.h>
 
 extern Cog::Compiler cog;
 extern int line;
@@ -253,8 +254,8 @@ void ifCondition(Info *cond)
 	printf("ifCondition()\n");
 	BasicBlock *thenBlock = BasicBlock::Create(cog.context, "then", func);
 	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
-	cog.getScope()->blocks.push_back(thenBlock);
-	cog.getScope()->blocks.push_back(elseBlock);
+	cog.getScope()->appendBlock(thenBlock);
+	cog.getScope()->appendBlock(elseBlock);
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->popBlock();
@@ -289,20 +290,28 @@ void ifStatement()
 	// if this block has an else statement we can't use the remaining else block
 	if (std::next(scope->curr) == scope->blocks.end()) {
 		BasicBlock *mergeBlock = BasicBlock::Create(cog.context, "merge", func);
-		scope->blocks.push_back(mergeBlock);
+		scope->appendBlock(mergeBlock);
+	}
+	
+	scope->nextBlock();
+	cog.builder.SetInsertPoint(scope->getBlock());
+
+	std::vector<llvm::PHINode*> phi;
+	phi.reserve(scope->symbols.size());
+	for (int i = 0; i < (int)scope->symbols.size(); i++) {
+		phi.push_back(cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1));
+		scope->symbols[i].values.back() = phi.back();
 	}
 
-	cog.printScope();	
-	scope->nextBlock();
-	cog.printScope();	
-		
 	while (scope->blocks.size() > 1) {
 		cog.builder.SetInsertPoint(scope->blocks.front());
 		cog.builder.CreateBr(scope->getBlock());
-		scope->blocks.pop_front();
+		for (int i = 0; i < (int)scope->symbols.size(); i++)
+			phi[i]->addIncoming(scope->symbols[i].values.front(), scope->blocks.front());
+		scope->dropBlock();
 		cog.printScope();	
 	}
-	cog.printScope();	
+	cog.printScope();
 	cog.builder.SetInsertPoint(scope->getBlock());
 }
 
