@@ -214,6 +214,7 @@ void assignSymbol(Info *symbol, Info *value)
 	if (symbol && value) {
 		if (symbol->type == value->type) {
 			symbol->symbol->setValue(value->value);
+			value->value->setName(symbol->symbol->name + "_");
 		} else {
 			printf("error: %d:%d typecheck failed\n", line, column); 
 			// typecheck failed
@@ -301,6 +302,7 @@ void ifStatement()
 	phi.reserve(scope->symbols.size());
 	for (int i = 0; i < (int)scope->symbols.size(); i++) {
 		phi.push_back(cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1));
+		phi.back()->setName(scope->symbols[i].name + "_");
 		scope->symbols[i].values.back() = phi.back();
 	}
 
@@ -333,6 +335,7 @@ void whileKeyword()
 	for (int i = 0; i < (int)scope->symbols.size(); i++) {
 		PHINode *value = cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1);
 		value->addIncoming(scope->symbols[i].getValue(), fromBlock);
+		value->setName(scope->symbols[i].name + "_");
 		scope->symbols[i].setValue(value);
 	}
 }
