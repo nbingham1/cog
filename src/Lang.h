@@ -21,5 +21,9 @@ void elseifCondition();
 void elseCondition();
 void ifStatement();
 
+void whileKeyword();
+void whileCondition(Info *cond);
+void whileStatement();
+
 }
 

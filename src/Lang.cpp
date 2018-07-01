@@ -315,5 +315,60 @@ void ifStatement()
 	cog.builder.SetInsertPoint(scope->getBlock());
 }
 
+void whileKeyword()
+{
+	Function *func = cog.builder.GetInsertBlock()->getParent();
+	BasicBlock *fromBlock = cog.getScope()->getBlock();
+	
+	printf("whileKeyword()\n");
+	BasicBlock *condBlock = BasicBlock::Create(cog.context, "cond", func);
+	cog.getScope()->appendBlock(condBlock);
+	
+	cog.builder.CreateBr(condBlock);
+	cog.getScope()->popBlock();
+	cog.builder.SetInsertPoint(cog.getScope()->getBlock());
+
+	Scope *scope = cog.getScope();
+	for (int i = 0; i < (int)scope->symbols.size(); i++) {
+		PHINode *value = cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1);
+		value->addIncoming(scope->symbols[i].getValue(), fromBlock);
+		scope->symbols[i].setValue(value);
+	}
+}
+
+void whileCondition(Info *cond)
+{
+	Function *func = cog.builder.GetInsertBlock()->getParent();
+	
+	printf("whileCondition()\n");
+	BasicBlock *thenBlock = BasicBlock::Create(cog.context, "then", func);
+	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
+	cog.getScope()->appendBlock(thenBlock);
+	cog.getScope()->appendBlock(elseBlock);
+
+	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
+	cog.getScope()->nextBlock();
+	cog.pushScope();
+	cog.builder.SetInsertPoint(cog.getScope()->getBlock());
+}
+
+void whileStatement()
+{
+	Scope *prev = &cog.scopes[cog.scopes.size()-2];
+	Scope *curr = cog.getScope();
+	for (int i = 0; i < (int)prev->symbols.size(); i++) {
+		((PHINode*)prev->symbols[i].getValue())->addIncoming(curr->symbols[i].getValue(), curr->getBlock());
+		curr->symbols[i].setValue(prev->symbols[i].getValue());
+	}
+
+	cog.popScope();
+	cog.builder.CreateBr(cog.getScope()->blocks.front());
+	cog.getScope()->nextBlock();
+	cog.builder.SetInsertPoint(cog.getScope()->getBlock());
+
+	while (cog.getScope()->blocks.size() > 1)
+		cog.getScope()->dropBlock();
+}
+
 }
 

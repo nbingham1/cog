@@ -39,11 +39,24 @@ primary_statement
 	| call ';'
 	| ret ';'
 	| if_statement
+	| while_statement
 	;
 
 statement_block
 	: '{' statement_list '}'
 	| primary_statement
+	;
+
+while_statement
+	: while_condition statement_block { Cog::whileStatement(); }
+	;
+
+while_condition
+	: while_keyword '(' expression ')' { Cog::whileCondition($<info>3); }
+	;
+
+while_keyword
+	: WHILE { Cog::whileKeyword(); }
 	;
 
 if_statement
