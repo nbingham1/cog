@@ -230,7 +230,8 @@ void assignSymbol(Info *symbol, Info *value)
 
 void callFunction(char *txt)
 {
-	cog.createExit();
+	std::vector<Value*> argValues;
+	cog.builder.CreateCall(cog.module->getFunction(txt), argValues);
 }
 
 void returnValue(Info *value)
@@ -368,6 +369,27 @@ void whileStatement()
 
 	while (cog.getScope()->blocks.size() > 1)
 		cog.getScope()->dropBlock();
+}
+
+void functionPrototype(Info *retType, char *name)
+{
+	std::vector<Type*> args;
+  FunctionType *FT =
+    FunctionType::get(retType->type, args, false);
+
+  Function *F =
+    Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+	BasicBlock *body = BasicBlock::Create(cog.context, "entry", F, 0);
+	cog.scopes.push_back(Cog::Scope(body));
+	cog.builder.SetInsertPoint(body);
+
+	cog.func = F;
+}
+
+void functionDeclaration()
+{
+	cog.scopes.clear();
+	cog.func = NULL;
 }
 
 }

@@ -14,6 +14,10 @@ int main(int argc, char **argv)
 
 	cog.loadFile(argv[1]);
 
+	yyin = fopen(argv[1], "r");
+	yyparse();
+	fclose(yyin);
+
 	/* Create the top level interpreter function to call as entry */
 	vector<Type*> argTypes;
 	FunctionType *ftype = FunctionType::get(Type::getVoidTy(cog.context), argTypes, false);
@@ -21,12 +25,10 @@ int main(int argc, char **argv)
 	BasicBlock *_startBody = BasicBlock::Create(cog.context, "entry", _start, 0);
 	cog.scopes.push_back(Cog::Scope(_startBody));
 	cog.builder.SetInsertPoint(_startBody);
-
-	yyin = fopen(argv[1], "r");
-	yyparse();
-	fclose(yyin);
-
-	//cog.module->print(llvm::errs(), nullptr, false, true);
+	
+	vector<Value*> argValues;
+	cog.builder.CreateCall(cog.module->getFunction("main"), argValues);
+	cog.createExit();
 
 	cog.setTarget();
 	//cog.emit(TargetMachine::CGFT_AssemblyFile);

@@ -28,6 +28,26 @@ extern int column;
 
 %%
 
+program
+	: program function_declaration
+	| function_declaration
+	;
+
+function_declaration
+	: function_prototype '{' statement_list '}' { Cog::functionDeclaration(); }
+	| function_prototype '{' '}' { Cog::functionDeclaration(); }
+	;
+
+function_prototype
+	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionPrototype($<info>1, $<syntax>2); /*, $<info>4*/ }
+	| type_specifier IDENTIFIER '(' ')' { Cog::functionPrototype($<info>1, $<syntax>2); }
+	;
+
+declaration_list
+	: declaration_list ',' declaration
+	| declaration
+	;
+
 statement_list
 	: statement_list primary_statement
 	| primary_statement

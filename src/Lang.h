@@ -24,6 +24,8 @@ void ifStatement();
 void whileKeyword();
 void whileCondition(Info *cond);
 void whileStatement();
+void functionPrototype(Info *retType, char *name); 
+void functionDeclaration();
 
 }
 
