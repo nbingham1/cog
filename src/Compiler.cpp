@@ -9,9 +9,6 @@ namespace Cog
 Compiler::Compiler() : builder(context)
 {
 	targetTriple = "";
-	types.push_back(Typename());
-	types.back().name = "int";
-	types.back().type = Type::getInt32Ty(context);
 	func = NULL;
 	scopes.push_back(Scope());
 }

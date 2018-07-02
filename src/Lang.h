@@ -5,8 +5,8 @@
 namespace Cog
 {
 
-Info *getConstant(char *txt);
-Info *getTypename(char *txt);
+Info *getConstant(int token, char *txt);
+Info *getPrimitive(int token, char *txt);
 Info *getIdentifier(char *txt);
 Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);

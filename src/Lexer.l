@@ -9,10 +9,8 @@ int line = 0;
 
 l			[a-zA-Z_]
 d			[0-9]
-	/* x			[a-fA-F0-9] */
-	/* e			[Ee][-+]?{d}+ */
-	/* is		(u|i)({d}*) */
- 	/* fs		f(32|64) */
+x			[a-fA-F0-9]
+e			[Ee][-+]?{d}+
 
 %%
 
@@ -68,23 +66,20 @@ d			[0-9]
 
 ";"										{ column += yyleng; return ';'; }
 
-
-
 	/* primitive types */
-int										{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return TYPENAME; }
-	/* u?int({d}*)						{ return INTEGER; } */
-	/* float(16|32|64|80|128)	{ return FLOAT; } */
-	/* u?fixed({d}*)					{ return FIXED; } */
+void							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
+u?int{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_PRIMITIVE; }
+float{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
+u?fixed{d}*:{d}*	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
 
 	/* constants */
-{l}({l}|{d})*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
-	/* 0[xX]{x}+{is}?					{ return CONSTANT; } */
-	/* {d}+{is}?							{ return CONSTANT; } */
-{d}+									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return CONSTANT; }
+{l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
+0[xX]{x}+					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_CONSTANT; }
+{d}+							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_CONSTANT; }
 
-	/* {d}+{e}{fs}?						{ return CONSTANT; }
-{d}*"."{d}+{e}?{fs}?	{ return CONSTANT; }
-{d}+"."{d}*{e}?{fs}?	{ return CONSTANT; } */
+{d}+{e}						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
+{d}*"."{d}+{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
+{d}+"."{d}*{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
 
 	/* misc */
 [\n]									{ ++line; column = 0; }

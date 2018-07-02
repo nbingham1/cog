@@ -13,7 +13,7 @@ extern int column;
 namespace Cog
 {
 
-Info *getConstant(char *txt)
+Info *getConstant(int token, char *txt)
 {
 	Info *result = new Info();
 	result->value = ConstantInt::get(cog.context, APInt(32, atoi(txt), true));
@@ -22,18 +22,56 @@ Info *getConstant(char *txt)
 	return result;
 }
 
-Info *getTypename(char *txt)
+Info *getPrimitive(int token, char *txt)
 {
-	for (int i = 0; i < (int)cog.types.size(); i++) {
-		if (strcmp(cog.types[i].name.c_str(), txt) == 0) {
-			Info *result = new Info();
-			result->type = cog.types[i].type;
-			delete txt;
+	// TODO distinction between signed & unsigned integers
+	// TODO fixed point integer math set precision
+	// TODO pointer types
+	// TODO structure types
+	// TODO interface types
+	Info *result = new Info();
+	if (strncmp(txt, "void", 4) == 0) {
+		result->type = Type::getVoidTy(cog.context);
+		return result;
+	} else if (strncmp(txt, "uint", 4) == 0) {
+		unsigned int bitwidth = atoi(txt+4);
+		result->type = Type::getIntNTy(cog.context, bitwidth);
+		return result;
+	} else if (strncmp(txt, "int", 3) == 0) {
+		unsigned int bitwidth = atoi(txt+3);
+		result->type = Type::getIntNTy(cog.context, bitwidth);
+		return result;
+	} else if (strncmp(txt, "ufixed", 6) == 0) {
+		unsigned int bitwidth = atoi(txt+6);
+		result->type = Type::getIntNTy(cog.context, bitwidth);
+		return result;
+	} else if (strncmp(txt, "fixed", 5) == 0) {
+		unsigned int bitwidth = atoi(txt+5);
+		result->type = Type::getIntNTy(cog.context, bitwidth);
+		return result;
+	} else if (strncmp(txt, "float", 5) == 0) {
+		unsigned int bitwidth = atoi(txt+5);
+		switch (bitwidth) {
+		case 16:
+			result->type = Type::getHalfTy(cog.context);
 			return result;
+		case 32:
+			result->type = Type::getFloatTy(cog.context);
+			return result;
+		case 64:
+			result->type = Type::getDoubleTy(cog.context);
+			return result;
+		case 128:
+			result->type = Type::getFP128Ty(cog.context);
+			return result;
+		default:
+			printf("error: %d:%d floating point types must be 16, 32, 64, or 128 bits.\n", line, column); 
 		}
+	} else {
+		printf("error: %d:%d undefined type\n", line, column); 
 	}
 
-	printf("error: %d:%d undefined type\n", line, column); 
+	delete result;
 	delete txt;
 	return NULL;
 }

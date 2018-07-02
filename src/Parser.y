@@ -13,7 +13,7 @@ extern int column;
 
 %}
 
-%token TYPENAME IDENTIFIER CONSTANT
+%token VOID_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE IDENTIFIER INT_CONSTANT REAL_CONSTANT
 %token IF ELSE WHILE RETURN AND XOR OR NOT
 %token LE GE NE EQ SHL ASHR LSHR ROL ROR
 %left '+' '-'
@@ -24,7 +24,7 @@ extern int column;
 	Cog::Info *info;
 }
 
-%type<syntax> TYPENAME IDENTIFIER CONSTANT 
+%type<syntax> VOID_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE IDENTIFIER INT_CONSTANT REAL_CONSTANT
 
 %%
 
@@ -214,9 +214,14 @@ unary_operator
 	;
 
 primary_expression
-	: CONSTANT						{ $<info>$ = Cog::getConstant($<syntax>1); }
-	| instance			{ $<info>$ = $<info>1; }
+	: constant						{ $<info>$ = $<info>1; }
+	| instance						{ $<info>$ = $<info>1; }
 	| '(' expression ')'	{ $<info>$ = $<info>2; }
+	;
+
+constant
+	: INT_CONSTANT	{ $<info>$ = Cog::getConstant(INT_CONSTANT, $<syntax>1); }
+	| REAL_CONSTANT	{ $<info>$ = Cog::getConstant(REAL_CONSTANT, $<syntax>1); }
 	;
 
 instance_list
@@ -229,7 +234,10 @@ instance
 	;
 
 type_specifier
-	: TYPENAME { $<info>$ = Cog::getTypename($<syntax>1); }
+	: VOID_PRIMITIVE { $<info>$ = Cog::getPrimitive(VOID_PRIMITIVE, $<syntax>1); }
+	| INT_PRIMITIVE { $<info>$ = Cog::getPrimitive(INT_PRIMITIVE, $<syntax>1); }
+	| FLOAT_PRIMITIVE { $<info>$ = Cog::getPrimitive(FLOAT_PRIMITIVE, $<syntax>1); }
+	| FIXED_PRIMITIVE { $<info>$ = Cog::getPrimitive(FIXED_PRIMITIVE, $<syntax>1); }
 	;
 
 %%
