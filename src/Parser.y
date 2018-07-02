@@ -39,13 +39,8 @@ function_declaration
 	;
 
 function_prototype
-	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionPrototype($<info>1, $<syntax>2); /*, $<info>4*/ }
+	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionPrototype($<info>1, $<syntax>2); }
 	| type_specifier IDENTIFIER '(' ')' { Cog::functionPrototype($<info>1, $<syntax>2); }
-	;
-
-declaration_list
-	: declaration_list ',' declaration
-	| declaration
 	;
 
 statement_list
@@ -54,7 +49,7 @@ statement_list
 	;
 
 primary_statement
-	: declaration ';'
+	: variable_declaration ';'
 	| assignment ';'
 	| call ';'
 	| ret ';'
@@ -101,7 +96,12 @@ else_condition
 	: ELSE { Cog::elseCondition(); }
 	;
 
-declaration
+declaration_list
+	: declaration_list ',' variable_declaration
+	| variable_declaration
+	;
+
+variable_declaration
 	: type_specifier IDENTIFIER { Cog::declareSymbol($<info>1, $<syntax>2); }
 	;
 
@@ -216,6 +216,11 @@ primary_expression
 	: CONSTANT						{ $<info>$ = Cog::getConstant($<syntax>1); }
 	| inst_specifier			{ $<info>$ = $<info>1; }
 	| '(' expression ')'	{ $<info>$ = $<info>2; }
+	;
+
+inst_specifier_list
+	: inst_specifier_list ',' inst_specifier
+	| inst_specifier
 	;
 
 inst_specifier

@@ -53,6 +53,10 @@ llvm::Value *Symbol::getValue()
 	return *curr;
 }
 
+Scope::Scope()
+{
+}
+
 Scope::Scope(llvm::BasicBlock *block)
 {
 	blocks.push_back(block);
@@ -109,7 +113,12 @@ void Scope::popBlock()
 
 void Scope::setBlock(llvm::BasicBlock *block)
 {
-	*curr = block;
+	if (blocks.size() == 0) {
+		blocks.push_back(block);
+		curr = blocks.begin();
+	} else {
+		*curr = block;
+	}
 }
 
 llvm::BasicBlock *Scope::getBlock()
@@ -124,6 +133,23 @@ void Scope::merge(Scope *from)
 		symbols[i].setValue(from->symbols[i].getValue());
 	}
 }	
+
+Symbol* Scope::findSymbol(std::string name)
+{
+	for (auto symbol = symbols.rbegin(); symbol != symbols.rend(); ++symbol) {
+		if (symbol->name == name) {
+			return &(*symbol);
+		}
+	}
+
+	return NULL;
+}
+
+Symbol *Scope::createSymbol(std::string name, llvm::Type *type)
+{
+	symbols.push_back(Cog::Symbol(name, type));
+	return &symbols.back();
+}
 
 Typename::Typename()
 {

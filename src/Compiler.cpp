@@ -13,6 +13,7 @@ Compiler::Compiler() : builder(context)
 	types.back().name = "int";
 	types.back().type = Type::getInt32Ty(context);
 	func = NULL;
+	scopes.push_back(Scope());
 }
 
 Compiler::~Compiler()
@@ -34,36 +35,13 @@ Scope* Compiler::getScope()
 
 void Compiler::pushScope()
 {
-	printf("pushScope()\n");
-	printScope();
 	scopes.push_back(Scope(getScope()));
-	printScope();
 }
 
 void Compiler::popScope()
 {
-	printf("popScope()\n");
-	printScope();
 	scopes[scopes.size()-2].merge(&scopes.back());
 	scopes.pop_back();
-	printScope();
-}
-
-Symbol* Compiler::findSymbol(string name)
-{
-	for (auto symbol = getScope()->symbols.rbegin(); symbol != getScope()->symbols.rend(); ++symbol) {
-		if (symbol->name == name) {
-			return &(*symbol);
-		}
-	}
-
-	return NULL;
-}
-
-Symbol *Compiler::createSymbol(string name, llvm::Type *type)
-{
-	getScope()->symbols.push_back(Cog::Symbol(name, type));
-	return &getScope()->symbols.back();
 }
 
 void Compiler::loadFile(string filename)

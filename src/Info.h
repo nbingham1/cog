@@ -32,6 +32,7 @@ struct Symbol
 
 struct Scope
 {
+	Scope();
 	Scope(llvm::BasicBlock *block);
 	Scope(Scope *from);
 	Scope(const Scope &copy);
@@ -49,6 +50,9 @@ struct Scope
 	llvm::BasicBlock *getBlock();
 
 	void merge(Scope *from);	
+
+	Symbol *findSymbol(std::string name);
+	Symbol *createSymbol(std::string name, llvm::Type *type);
 };
 
 struct Typename

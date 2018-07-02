@@ -40,7 +40,7 @@ Info *getTypename(char *txt)
 
 Info *getIdentifier(char *txt)
 {
-	Symbol *symbol = cog.findSymbol(txt);
+	Symbol *symbol = cog.getScope()->findSymbol(txt);
 	if (symbol) {
 		Info *result = new Info();
 		result->symbol = symbol;
@@ -188,23 +188,23 @@ Info *binaryOperator(Info *left, int op, Info *right)
 	}
 }
 
-void declareSymbol(Info *type, char *txt)
+void declareSymbol(Info *type, char *name)
 {
-	if (type && txt) {
-		if (cog.findSymbol(txt) != NULL) {
+	if (type && name) {
+		if (cog.getScope()->findSymbol(name) != NULL) {
 			printf("error: %d:%d variable already defined\n", line, column); 
 			// already defined
 		}
 
-		cog.createSymbol(txt, type->type);
+		cog.getScope()->createSymbol(name, type->type);
 		delete type;
-		delete txt;
+		delete name;
 	} else {
 		printf("error: %d:%d previous failure\n", line, column); 
 		if (type)
 			delete type;
-		if (txt)
-			delete txt;
+		if (name)
+			delete name;
 		// something is broken
 	}
 }
@@ -253,7 +253,6 @@ void ifCondition(Info *cond)
 {
 	Function *func = cog.builder.GetInsertBlock()->getParent();
 	
-	printf("ifCondition()\n");
 	BasicBlock *thenBlock = BasicBlock::Create(cog.context, "then", func);
 	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
 	cog.getScope()->appendBlock(thenBlock);
@@ -267,7 +266,6 @@ void ifCondition(Info *cond)
 
 void elseifCondition()
 {
-	printf("elseifCondition()\n");
 	cog.popScope();
 	cog.getScope()->nextBlock();	
 	cog.builder.SetInsertPoint(cog.getScope()->getBlock());
@@ -275,7 +273,6 @@ void elseifCondition()
 
 void elseCondition()
 {
-	printf("elseCondition()\n");
 	cog.popScope();
 	cog.getScope()->nextBlock();
 	cog.pushScope();
@@ -286,7 +283,6 @@ void ifStatement()
 {
 	Function *func = cog.builder.GetInsertBlock()->getParent();
 	
-	printf("ifStatement()\n");
 	cog.popScope();
 	Scope *scope = cog.getScope();
 	// if this block has an else statement we can't use the remaining else block
@@ -312,9 +308,7 @@ void ifStatement()
 		for (int i = 0; i < (int)scope->symbols.size(); i++)
 			phi[i]->addIncoming(scope->symbols[i].values.front(), scope->blocks.front());
 		scope->dropBlock();
-		cog.printScope();	
 	}
-	cog.printScope();
 	cog.builder.SetInsertPoint(scope->getBlock());
 }
 
@@ -323,7 +317,6 @@ void whileKeyword()
 	Function *func = cog.builder.GetInsertBlock()->getParent();
 	BasicBlock *fromBlock = cog.getScope()->getBlock();
 	
-	printf("whileKeyword()\n");
 	BasicBlock *condBlock = BasicBlock::Create(cog.context, "cond", func);
 	cog.getScope()->appendBlock(condBlock);
 	
@@ -344,7 +337,6 @@ void whileCondition(Info *cond)
 {
 	Function *func = cog.builder.GetInsertBlock()->getParent();
 	
-	printf("whileCondition()\n");
 	BasicBlock *thenBlock = BasicBlock::Create(cog.context, "then", func);
 	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
 	cog.getScope()->appendBlock(thenBlock);
@@ -377,13 +369,24 @@ void whileStatement()
 void functionPrototype(Info *retType, char *name)
 {
 	std::vector<Type*> args;
-  FunctionType *FT =
-    FunctionType::get(retType->type, args, false);
+	args.reserve(cog.getScope()->symbols.size());
+	for (int i = 0; i < (int)cog.getScope()->symbols.size(); i++)
+		args.push_back(cog.getScope()->symbols[i].type);
 
-  Function *F =
-    Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+  FunctionType *FT = FunctionType::get(retType->type, args, false);
+
+  Function *F = Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+	
+	int i = 0;
+	for (auto &arg : F->args()) {
+		arg.setName(cog.getScope()->symbols[i].name);
+		cog.getScope()->symbols[i].setValue(&arg);
+		++i;
+	}
+
 	BasicBlock *body = BasicBlock::Create(cog.context, "entry", F, 0);
-	cog.scopes.push_back(Cog::Scope(body));
+	cog.getScope()->blocks.push_back(body);
+	cog.getScope()->curr = cog.getScope()->blocks.begin();
 	cog.builder.SetInsertPoint(body);
 
 	cog.func = F;
@@ -391,8 +394,9 @@ void functionPrototype(Info *retType, char *name)
 
 void functionDeclaration()
 {
-	cog.scopes.clear();
 	cog.func = NULL;
+	cog.scopes.pop_back();
+	cog.scopes.push_back(Scope());
 }
 
 }

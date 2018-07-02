@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 	FunctionType *ftype = FunctionType::get(Type::getVoidTy(cog.context), argTypes, false);
 	Function *_start = Function::Create(ftype, GlobalValue::ExternalLinkage, "_start", cog.module);
 	BasicBlock *_startBody = BasicBlock::Create(cog.context, "entry", _start, 0);
-	cog.scopes.push_back(Cog::Scope(_startBody));
+	cog.getScope()->setBlock(_startBody);
 	cog.builder.SetInsertPoint(_startBody);
 	
 	vector<Value*> argValues;

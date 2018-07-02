@@ -49,6 +49,7 @@ struct Compiler
 	TargetMachine *target;
 	Module *module;
 	std::string source;
+
 	Function *func;
 
 	std::vector<Typename> types;
@@ -58,8 +59,6 @@ struct Compiler
 	Scope* getScope();
 	void pushScope();
 	void popScope();
-	Symbol *findSymbol(std::string name);
-	Symbol *createSymbol(std::string name, llvm::Type *type);
 
 
 	void loadFile(std::string filename);
