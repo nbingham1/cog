@@ -30,27 +30,27 @@ Info *getPrimitive(int token, char *txt)
 	// TODO structure types
 	// TODO interface types
 	Info *result = new Info();
-	if (strncmp(txt, "void", 4) == 0) {
+	if (token == VOID_PRIMITIVE) {
 		result->type = Type::getVoidTy(cog.context);
 		return result;
-	} else if (strncmp(txt, "uint", 4) == 0) {
+	} else if (token == INT_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+4);
 		result->type = Type::getIntNTy(cog.context, bitwidth);
 		return result;
-	} else if (strncmp(txt, "int", 3) == 0) {
+	} else if (token == INT_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+3);
 		result->type = Type::getIntNTy(cog.context, bitwidth);
 		return result;
-	} else if (strncmp(txt, "ufixed", 6) == 0) {
+	} else if (token == FIXED_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+6);
 		result->type = Type::getIntNTy(cog.context, bitwidth);
 		return result;
-	} else if (strncmp(txt, "fixed", 5) == 0) {
+	} else if (token == FIXED_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+5);
 		result->type = Type::getIntNTy(cog.context, bitwidth);
 		return result;
-	} else if (strncmp(txt, "float", 5) == 0) {
-		unsigned int bitwidth = atoi(txt+5);
+	} else if (token == FLOAT_PRIMITIVE) {
+		unsigned int bitwidth = atof(txt+5);
 		switch (bitwidth) {
 		case 16:
 			result->type = Type::getHalfTy(cog.context);

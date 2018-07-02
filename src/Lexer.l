@@ -74,12 +74,12 @@ u?fixed{d}*:{d}*	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); re
 
 	/* constants */
 {l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
-0[xX]{x}+					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_CONSTANT; }
-{d}+							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_CONSTANT; }
+0[xX]{x}+					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return NUM_CONSTANT; }
+{d}+							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return NUM_CONSTANT; }
 
-{d}+{e}						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
-{d}*"."{d}+{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
-{d}+"."{d}*{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return REAL_CONSTANT; }
+{d}+{e}						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return NUM_CONSTANT; }
+{d}*"."{d}+{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return NUM_CONSTANT; }
+{d}+"."{d}*{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return NUM_CONSTANT; }
 
 	/* misc */
 [\n]									{ ++line; column = 0; }
