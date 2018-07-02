@@ -229,9 +229,18 @@ void assignSymbol(Info *symbol, Info *value)
 	}
 }
 
-void callFunction(char *txt)
+void callFunction(char *txt, Info *args)
 {
 	std::vector<Value*> argValues;
+	Info *curr = args;
+	while (curr != NULL) {
+		argValues.push_back(curr->value);
+		curr = curr->next;
+	}
+
+	if (args != NULL)
+		delete args;
+
 	cog.builder.CreateCall(cog.module->getFunction(txt), argValues);
 }
 
@@ -397,6 +406,15 @@ void functionDeclaration()
 	cog.func = NULL;
 	cog.scopes.pop_back();
 	cog.scopes.push_back(Scope());
+}
+
+Info *instanceList(Info *lst, Info *elem)
+{
+	Info *curr = lst;
+	while (curr->next != NULL)
+		curr = curr->next;
+	curr->next = elem;
+	return lst;
 }
 
 }

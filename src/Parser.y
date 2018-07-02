@@ -106,11 +106,12 @@ variable_declaration
 	;
 
 assignment
-	: inst_specifier '=' expression { Cog::assignSymbol($<info>1, $<info>3); }
+	: instance '=' expression { Cog::assignSymbol($<info>1, $<info>3); }
 	;
 
 call
-	: IDENTIFIER '(' ')' { Cog::callFunction($<syntax>1); }
+	: IDENTIFIER '(' instance_list ')' { Cog::callFunction($<syntax>1, $<info>3); }
+	| IDENTIFIER '(' ')' { Cog::callFunction($<syntax>1, NULL); }
 	;
 
 ret
@@ -214,16 +215,16 @@ unary_operator
 
 primary_expression
 	: CONSTANT						{ $<info>$ = Cog::getConstant($<syntax>1); }
-	| inst_specifier			{ $<info>$ = $<info>1; }
+	| instance			{ $<info>$ = $<info>1; }
 	| '(' expression ')'	{ $<info>$ = $<info>2; }
 	;
 
-inst_specifier_list
-	: inst_specifier_list ',' inst_specifier
-	| inst_specifier
+instance_list
+	: instance_list ',' instance { $<info>$ = Cog::instanceList($<info>1, $<info>3); }
+	| instance { $<info>$ = $<info>1; }
 	;
 
-inst_specifier
+instance
 	: IDENTIFIER	{ $<info>$ = Cog::getIdentifier($<syntax>1); }
 	;
 

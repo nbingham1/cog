@@ -72,6 +72,7 @@ struct Info
 	llvm::Type *type;
 	llvm::Value *value;
 	Symbol *symbol;
+	Info *next;
 };
 
 }

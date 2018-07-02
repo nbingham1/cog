@@ -12,7 +12,7 @@ Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);
 void declareSymbol(Info *type, char *name);
 void assignSymbol(Info *symbol, Info *value);
-void callFunction(char *txt);
+void callFunction(char *txt, Info *args);
 void returnValue(Info *value);
 void returnVoid();
 
@@ -26,6 +26,8 @@ void whileCondition(Info *cond);
 void whileStatement();
 void functionPrototype(Info *retType, char *name); 
 void functionDeclaration();
+
+Info *instanceList(Info *lst, Info *elem);
 
 }
 

@@ -165,10 +165,14 @@ Info::Info()
 	type = NULL;
 	value = NULL;
 	symbol = NULL;
+	next = NULL;
 }
 
 Info::~Info()
 {
+	if (next != NULL)
+		delete next;
+	next = NULL;
 }
 
 }
