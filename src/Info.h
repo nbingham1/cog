@@ -11,6 +11,33 @@
 namespace Cog
 {
 
+struct AbstractType;
+
+struct Typename
+{
+	Typename();
+	~Typename();
+
+	AbstractType *retType;
+	std::string name;
+	AbstractType *recvType;
+	std::vector<AbstractType*> argTypes;
+};
+
+bool operator==(const Typename &t1, const Typename &t2);
+
+struct AbstractType
+{
+	llvm::Type *base;
+	Typename name;
+};
+
+struct AbstractValue
+{
+	llvm::Value *base;
+	AbstractType *type;	
+};
+
 struct Symbol
 {
 	Symbol(std::string name, llvm::Type *type);
@@ -53,15 +80,6 @@ struct Scope
 
 	Symbol *findSymbol(std::string name);
 	Symbol *createSymbol(std::string name, llvm::Type *type);
-};
-
-struct Typename
-{
-	Typename();
-	~Typename();
-
-	std::string name;
-	llvm::Type *type;
 };
 
 struct Info

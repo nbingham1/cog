@@ -5,6 +5,24 @@
 namespace Cog
 {
 
+Typename::Typename()
+{
+	retType = NULL;
+	recvType = NULL;
+}
+
+Typename::~Typename()
+{
+}
+
+bool operator==(const Typename &t1, const Typename &t2)
+{
+	return t1.retType == t2.retType
+			&& t1.name == t2.name
+			&& t1.recvType == t2.recvType
+			&& t1.argTypes == t2.argTypes;
+}
+
 Symbol::Symbol(std::string name, llvm::Value *value)
 {
 	this->type = value->getType();
@@ -149,15 +167,6 @@ Symbol *Scope::createSymbol(std::string name, llvm::Type *type)
 {
 	symbols.push_back(Cog::Symbol(name, type));
 	return &symbols.back();
-}
-
-Typename::Typename()
-{
-	type = NULL;
-}
-
-Typename::~Typename()
-{
 }
 
 Info::Info()

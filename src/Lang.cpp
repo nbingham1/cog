@@ -16,7 +16,8 @@ namespace Cog
 Info *getConstant(int token, char *txt)
 {
 	Info *result = new Info();
-	result->value = ConstantInt::get(cog.context, APInt(32, atoi(txt), true));
+	//result->value = ConstantFP::get(Type::getDoubleTy(cog.context), atof(txt));
+	result->value = ConstantInt::get(Type::getInt32Ty(cog.context), atoi(txt));
 	result->type = result->value->getType();
 	delete txt;
 	return result;
