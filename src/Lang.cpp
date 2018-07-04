@@ -414,7 +414,18 @@ void whileStatement()
 		cog.getScope()->dropBlock();
 }
 
-void functionPrototype(Info *retType, char *name)
+void functionPrototype(Info *retType, char *name, Info *typeList)
+{
+	std::vector<Type*> args;
+	Info *curr = typeList;
+	while (curr != NULL)	
+		args.push_back(curr->type);
+
+  FunctionType *FT = FunctionType::get(retType->type, args, false);
+  Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+}
+
+void functionDeclaration(Info *retType, char *name)
 {
 	std::vector<Type*> args;
 	args.reserve(cog.getScope()->symbols.size());
@@ -422,8 +433,9 @@ void functionPrototype(Info *retType, char *name)
 		args.push_back(cog.getScope()->symbols[i].type);
 
   FunctionType *FT = FunctionType::get(retType->type, args, false);
-
-  Function *F = Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+	Function *F = cog.module->getFunction(name);
+	if (F == NULL)
+  	F = Function::Create(FT, Function::ExternalLinkage, name, cog.module);
 	
 	int i = 0;
 	for (auto &arg : F->args()) {
@@ -440,14 +452,14 @@ void functionPrototype(Info *retType, char *name)
 	cog.func = F;
 }
 
-void functionDeclaration()
+void functionDefinition()
 {
 	cog.func = NULL;
 	cog.scopes.pop_back();
 	cog.scopes.push_back(Scope());
 }
 
-Info *instanceList(Info *lst, Info *elem)
+Info *infoList(Info *lst, Info *elem)
 {
 	Info *curr = lst;
 	while (curr->next != NULL)

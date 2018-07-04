@@ -24,10 +24,11 @@ void ifStatement();
 void whileKeyword();
 void whileCondition(Info *cond);
 void whileStatement();
-void functionPrototype(Info *retType, char *name); 
-void functionDeclaration();
+void functionPrototype(Info *retType, char *name, Info *typeList);
+void functionDeclaration(Info *retType, char *name); 
+void functionDefinition();
 
-Info *instanceList(Info *lst, Info *elem);
+Info *infoList(Info *lst, Info *elem);
 
 }
 

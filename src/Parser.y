@@ -29,18 +29,28 @@ extern int column;
 %%
 
 program
-	: program function_declaration
+	: program block
+	| block
+	;
+
+block
+	: function_prototype
 	| function_declaration
 	;
 
 function_declaration
-	: function_prototype '{' statement_list '}' { Cog::functionDeclaration(); }
-	| function_prototype '{' '}' { Cog::functionDeclaration(); }
+	: function_declaration '{' statement_list '}' { Cog::functionDefinition(); }
+	| function_declaration '{' '}' { Cog::functionDefinition(); }
 	;
 
 function_prototype
-	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionPrototype($<info>1, $<syntax>2); }
-	| type_specifier IDENTIFIER '(' ')' { Cog::functionPrototype($<info>1, $<syntax>2); }
+	: type_specifier IDENTIFIER '(' type_list ')' ';' { Cog::functionPrototype($<info>1, $<syntax>2, $<info>4); }
+	| type_specifier IDENTIFIER '(' ')' ';' { Cog::functionPrototype($<info>1, $<syntax>2, NULL); }
+	;
+
+function_declaration
+	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionDeclaration($<info>1, $<syntax>2); }
+	| type_specifier IDENTIFIER '(' ')' { Cog::functionDeclaration($<info>1, $<syntax>2); }
 	;
 
 statement_list
@@ -103,6 +113,11 @@ declaration_list
 
 variable_declaration
 	: type_specifier IDENTIFIER { Cog::declareSymbol($<info>1, $<syntax>2); }
+	;
+
+type_list
+	: type_list ',' type_specifier { Cog::infoList($<info>1, $<info>3); }
+	| type_specifier { $<info>$ = $<info>1; }
 	;
 
 assignment
@@ -224,7 +239,7 @@ constant
 	;
 
 instance_list
-	: instance_list ',' instance { $<info>$ = Cog::instanceList($<info>1, $<info>3); }
+	: instance_list ',' instance { $<info>$ = Cog::infoList($<info>1, $<info>3); }
 	| instance { $<info>$ = $<info>1; }
 	;
 
