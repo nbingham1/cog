@@ -13,17 +13,7 @@ extern int column;
 namespace Cog
 {
 
-Info *getConstant(int token, char *txt)
-{
-	Info *result = new Info();
-	//result->value = ConstantFP::get(Type::getDoubleTy(cog.context), atof(txt));
-	result->value = ConstantInt::get(Type::getInt32Ty(cog.context), atoi(txt));
-	result->type = result->value->getType();
-	delete txt;
-	return result;
-}
-
-Info *getPrimitive(int token, char *txt)
+Info *getTypename(int token, char *txt)
 {
 	// TODO distinction between signed & unsigned integers
 	// TODO fixed point integer math set precision
@@ -32,42 +22,50 @@ Info *getPrimitive(int token, char *txt)
 	// TODO interface types
 	Info *result = new Info();
 	if (token == VOID_PRIMITIVE) {
-		result->type = Type::getVoidTy(cog.context);
+		result->type.prim = Type::getVoidTy(cog.context);
 		return result;
 	} else if (token == INT_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+4);
-		result->type = Type::getIntNTy(cog.context, bitwidth);
+		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
+		result->type.isUnsigned = true;
 		return result;
 	} else if (token == INT_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+3);
-		result->type = Type::getIntNTy(cog.context, bitwidth);
+		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
 		return result;
 	} else if (token == FIXED_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+6);
-		result->type = Type::getIntNTy(cog.context, bitwidth);
+		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
+		result->type.isUnsigned = true;
+		result->type.isFixedPoint = true;
+		result->type.fixedPointPrecision = bitwidth/4;
 		return result;
 	} else if (token == FIXED_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+5);
-		result->type = Type::getIntNTy(cog.context, bitwidth);
+		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
+		result->type.isFixedPoint = true;
+		result->type.fixedPointPrecision = bitwidth/4;
 		return result;
 	} else if (token == FLOAT_PRIMITIVE) {
 		unsigned int bitwidth = atof(txt+5);
 		switch (bitwidth) {
 		case 16:
-			result->type = Type::getHalfTy(cog.context);
+			result->type.prim = Type::getHalfTy(cog.context);
 			return result;
 		case 32:
-			result->type = Type::getFloatTy(cog.context);
+			result->type.prim = Type::getFloatTy(cog.context);
 			return result;
 		case 64:
-			result->type = Type::getDoubleTy(cog.context);
+			result->type.prim = Type::getDoubleTy(cog.context);
 			return result;
 		case 128:
-			result->type = Type::getFP128Ty(cog.context);
+			result->type.prim = Type::getFP128Ty(cog.context);
 			return result;
 		default:
 			printf("error: %d:%d floating point types must be 16, 32, 64, or 128 bits.\n", line, column); 
 		}
+	} else if (token == IDENTIFIER) {
+		
 	} else {
 		printf("error: %d:%d undefined type\n", line, column); 
 	}
@@ -77,6 +75,16 @@ Info *getPrimitive(int token, char *txt)
 	return NULL;
 }
 
+Info *getConstant(int token, char *txt)
+{
+	Info *result = new Info();
+	//result->value = ConstantFP::get(Type::getDoubleTy(cog.context), atof(txt));
+	result->value = ConstantInt::get(Type::getInt32Ty(cog.context), atoi(txt));
+	result->type.prim = result->value->getType();
+	delete txt;
+	return result;
+}
+
 Info *getIdentifier(char *txt)
 {
 	Symbol *symbol = cog.getScope()->findSymbol(txt);
@@ -84,7 +92,7 @@ Info *getIdentifier(char *txt)
 		Info *result = new Info();
 		result->symbol = symbol;
 		result->value = symbol->getValue();
-		result->type = result->value->getType();
+		result->type = result->symbol->type;
 		delete txt;
 		return result;
 	}
@@ -101,8 +109,6 @@ Info *unaryOperator(int op, Info *arg)
 			case '-':
 				arg->value = cog.builder.CreateNeg(arg->value);
 				break;
-			case '+':
-				return arg;
 			case '~':
 				arg->value = cog.builder.CreateNot(arg->value);
 				break;
@@ -115,7 +121,7 @@ Info *unaryOperator(int op, Info *arg)
 				delete arg;
 				return NULL;
 		}
-		arg->type = arg->value->getType();
+		arg->type.prim = arg->value->getType();
 		arg->symbol = NULL;
 		return arg;
 	} else {
@@ -213,7 +219,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			delete right;
 			return NULL;
 		}
-		left->type = left->value->getType();
+		left->type.prim = left->value->getType();
 		left->symbol = NULL;
 		delete right;
 		return left;
@@ -268,19 +274,58 @@ void assignSymbol(Info *symbol, Info *value)
 	}
 }
 
-void callFunction(char *txt, Info *args)
+void structureDefinition(char *name)
 {
-	std::vector<Value*> argValues;
-	Info *curr = args;
-	while (curr != NULL) {
-		argValues.push_back(curr->value);
-		curr = curr->next;
+	std::vector<Type*> members;
+	for (int i = 0; i < (int)cog.getScope()->symbols.size(); i++) {
+		members.push_back(cog.getScope()->symbols[i].type.prim);
 	}
 
-	if (args != NULL)
-		delete args;
+	llvm::StructType::create(cog.context, members, name, false);
+	cog.scopes.pop_back();
+	cog.scopes.push_back(Scope());
+}
 
-	cog.builder.CreateCall(cog.module->getFunction(txt), argValues);
+void functionPrototype(Info *retType, char *name, Info *typeList)
+{
+	std::vector<Type*> args;
+	Info *curr = typeList;
+	while (curr != NULL)	
+		args.push_back(curr->type.prim);
+
+  FunctionType *FT = FunctionType::get(retType->type.prim, args, false);
+  Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+}
+
+void functionDeclaration(Info *retType, char *name)
+{
+	std::vector<Type*> args;
+	args.reserve(cog.getScope()->symbols.size());
+	for (int i = 0; i < (int)cog.getScope()->symbols.size(); i++)
+		args.push_back(cog.getScope()->symbols[i].type.prim);
+
+  FunctionType *FT = FunctionType::get(retType->type.prim, args, false);
+	Function *F = cog.module->getFunction(name);
+	if (F == NULL)
+  	F = Function::Create(FT, Function::ExternalLinkage, name, cog.module);
+	
+	int i = 0;
+	for (auto &arg : F->args()) {
+		arg.setName(cog.getScope()->symbols[i].name);
+		cog.getScope()->symbols[i].setValue(&arg);
+		++i;
+	}
+
+	BasicBlock *body = BasicBlock::Create(cog.context, "entry", F, 0);
+	cog.getScope()->blocks.push_back(body);
+	cog.getScope()->curr = cog.getScope()->blocks.begin();
+	cog.builder.SetInsertPoint(body);
+}
+
+void functionDefinition()
+{
+	cog.scopes.pop_back();
+	cog.scopes.push_back(Scope());
 }
 
 void returnValue(Info *value)
@@ -295,6 +340,21 @@ void returnValue(Info *value)
 void returnVoid()
 {
 	cog.builder.CreateRetVoid();
+}
+
+void callFunction(char *txt, Info *args)
+{
+	std::vector<Value*> argValues;
+	Info *curr = args;
+	while (curr != NULL) {
+		argValues.push_back(curr->value);
+		curr = curr->next;
+	}
+
+	if (args != NULL)
+		delete args;
+
+	cog.builder.CreateCall(cog.module->getFunction(txt), argValues);
 }
 
 void ifCondition(Info *cond)
@@ -345,7 +405,7 @@ void ifStatement()
 	std::vector<llvm::PHINode*> phi;
 	phi.reserve(scope->symbols.size());
 	for (int i = 0; i < (int)scope->symbols.size(); i++) {
-		phi.push_back(cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1));
+		phi.push_back(cog.builder.CreatePHI(scope->symbols[i].type.prim, scope->blocks.size()-1));
 		phi.back()->setName(scope->symbols[i].name + "_");
 		scope->symbols[i].values.back() = phi.back();
 	}
@@ -374,7 +434,7 @@ void whileKeyword()
 
 	Scope *scope = cog.getScope();
 	for (int i = 0; i < (int)scope->symbols.size(); i++) {
-		PHINode *value = cog.builder.CreatePHI(scope->symbols[i].type, scope->blocks.size()-1);
+		PHINode *value = cog.builder.CreatePHI(scope->symbols[i].type.prim, scope->blocks.size()-1);
 		value->addIncoming(scope->symbols[i].getValue(), fromBlock);
 		value->setName(scope->symbols[i].name + "_");
 		scope->symbols[i].setValue(value);
@@ -412,51 +472,6 @@ void whileStatement()
 
 	while (cog.getScope()->blocks.size() > 1)
 		cog.getScope()->dropBlock();
-}
-
-void functionPrototype(Info *retType, char *name, Info *typeList)
-{
-	std::vector<Type*> args;
-	Info *curr = typeList;
-	while (curr != NULL)	
-		args.push_back(curr->type);
-
-  FunctionType *FT = FunctionType::get(retType->type, args, false);
-  Function::Create(FT, Function::ExternalLinkage, name, cog.module);
-}
-
-void functionDeclaration(Info *retType, char *name)
-{
-	std::vector<Type*> args;
-	args.reserve(cog.getScope()->symbols.size());
-	for (int i = 0; i < (int)cog.getScope()->symbols.size(); i++)
-		args.push_back(cog.getScope()->symbols[i].type);
-
-  FunctionType *FT = FunctionType::get(retType->type, args, false);
-	Function *F = cog.module->getFunction(name);
-	if (F == NULL)
-  	F = Function::Create(FT, Function::ExternalLinkage, name, cog.module);
-	
-	int i = 0;
-	for (auto &arg : F->args()) {
-		arg.setName(cog.getScope()->symbols[i].name);
-		cog.getScope()->symbols[i].setValue(&arg);
-		++i;
-	}
-
-	BasicBlock *body = BasicBlock::Create(cog.context, "entry", F, 0);
-	cog.getScope()->blocks.push_back(body);
-	cog.getScope()->curr = cog.getScope()->blocks.begin();
-	cog.builder.SetInsertPoint(body);
-
-	cog.func = F;
-}
-
-void functionDefinition()
-{
-	cog.func = NULL;
-	cog.scopes.pop_back();
-	cog.scopes.push_back(Scope());
 }
 
 Info *infoList(Info *lst, Info *elem)

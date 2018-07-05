@@ -3,6 +3,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Instructions.h>
 
 #include <vector>
 #include <list>
@@ -11,42 +12,65 @@
 namespace Cog
 {
 
-struct AbstractType;
+struct BaseType;
 
 struct Typename
 {
 	Typename();
 	~Typename();
 
-	AbstractType *retType;
-	std::string name;
-	AbstractType *recvType;
-	std::vector<AbstractType*> argTypes;
+	llvm::Type *prim;
+	BaseType *base;
+
+	int pointerCount;
+
+	bool isUnsigned;
+	bool isFixedPoint;
+	int fixedPointPrecision;
 };
 
 bool operator==(const Typename &t1, const Typename &t2);
 
-struct AbstractType
+/*
+
+Primitives: prim, name
+Functions: prim, retType, name, argTypes
+Member Functions: prim, retType, name, recvType, argTypes
+Structures: prim, name, argTypes
+Interfaces: name, argTypes
+
+*/
+struct BaseType
 {
-	llvm::Type *base;
-	Typename name;
+	BaseType();
+	~BaseType();
+
+	llvm::Type *prim;
+
+	Typename retType;
+	std::string name;
+	Typename recvType;
+	std::vector<Typename> argTypes;
 };
 
-struct AbstractValue
+bool operator==(const BaseType &t1, const BaseType &t2);
+
+struct BaseValue
 {
-	llvm::Value *base;
-	AbstractType *type;	
+	Typename type;
+	llvm::Value *value;
+	llvm::AllocaInst *inst;
 };
 
 struct Symbol
 {
-	Symbol(std::string name, llvm::Type *type);
-	Symbol(std::string name, llvm::Value *value);
+	Symbol(std::string name, Typename type);
 	Symbol(const Symbol &copy);
 	~Symbol();
 
-	llvm::Type *type;
+	Typename type;
 	std::string name;
+	llvm::AllocaInst *inst;
 
 	std::list<llvm::Value*> values;
 	std::list<llvm::Value*>::iterator curr;
@@ -79,7 +103,7 @@ struct Scope
 	void merge(Scope *from);	
 
 	Symbol *findSymbol(std::string name);
-	Symbol *createSymbol(std::string name, llvm::Type *type);
+	Symbol *createSymbol(std::string name, Typename type);
 };
 
 struct Info
@@ -87,7 +111,7 @@ struct Info
 	Info();
 	~Info();
 
-	llvm::Type *type;
+	Typename type;
 	llvm::Value *value;
 	Symbol *symbol;
 	Info *next;

@@ -9,7 +9,6 @@ namespace Cog
 Compiler::Compiler() : builder(context)
 {
 	targetTriple = "";
-	func = NULL;
 	scopes.push_back(Scope());
 }
 

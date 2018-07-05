@@ -14,7 +14,7 @@ extern int column;
 %}
 
 %token VOID_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE IDENTIFIER NUM_CONSTANT
-%token IF ELSE WHILE RETURN AND XOR OR NOT
+%token STRUCT IF ELSE WHILE RETURN AND XOR OR NOT
 %token LE GE NE EQ SHL ASHR LSHR ROL ROR
 %left '+' '-'
 %left '*' '/' '%'
@@ -34,8 +34,14 @@ program
 	;
 
 block
-	: function_prototype
+	: structure_declaration
+	| function_prototype
 	| function_declaration
+	;
+
+structure_declaration
+	: STRUCT IDENTIFIER '{' declaration_block '}' { Cog::structureDefinition($<syntax>2); }
+	| STRUCT IDENTIFIER '{' '}' { Cog::structureDefinition($<syntax>2); }
 	;
 
 function_declaration
@@ -104,6 +110,11 @@ elseif_condition
 
 else_condition
 	: ELSE { Cog::elseCondition(); }
+	;
+
+declaration_block
+	: declaration_block variable_declaration ';'
+	| variable_declaration ';'
 	;
 
 declaration_list
@@ -222,8 +233,7 @@ unary_expression
 	;
 
 unary_operator
-	: '+' { $<token>$ = '+'; }
-	| '-' { $<token>$ = '-'; }
+	: '-' { $<token>$ = '-'; }
 	| NOT { $<token>$ = NOT; }
 	| '~' { $<token>$ = '~'; }
 	;
@@ -248,10 +258,11 @@ instance
 	;
 
 type_specifier
-	: VOID_PRIMITIVE { $<info>$ = Cog::getPrimitive(VOID_PRIMITIVE, $<syntax>1); }
-	| INT_PRIMITIVE { $<info>$ = Cog::getPrimitive(INT_PRIMITIVE, $<syntax>1); }
-	| FLOAT_PRIMITIVE { $<info>$ = Cog::getPrimitive(FLOAT_PRIMITIVE, $<syntax>1); }
-	| FIXED_PRIMITIVE { $<info>$ = Cog::getPrimitive(FIXED_PRIMITIVE, $<syntax>1); }
+	: VOID_PRIMITIVE { $<info>$ = Cog::getTypename(VOID_PRIMITIVE, $<syntax>1); }
+	| INT_PRIMITIVE { $<info>$ = Cog::getTypename(INT_PRIMITIVE, $<syntax>1); }
+	| FLOAT_PRIMITIVE { $<info>$ = Cog::getTypename(FLOAT_PRIMITIVE, $<syntax>1); }
+	| FIXED_PRIMITIVE { $<info>$ = Cog::getTypename(FIXED_PRIMITIVE, $<syntax>1); }
+	| IDENTIFIER { $<info>$ = Cog::getTypename(IDENTIFIER, $<syntax>1); }
 	;
 
 %%

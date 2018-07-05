@@ -15,6 +15,7 @@ e			[Ee][-+]?{d}+
 %%
 
 	/* keywords */
+"struct"							{ column += yyleng; return STRUCT; }
 "if"									{ column += yyleng; return IF; }
 "else"								{ column += yyleng; return ELSE; }
 "while"								{ column += yyleng; return WHILE; }
@@ -67,10 +68,10 @@ e			[Ee][-+]?{d}+
 ";"										{ column += yyleng; return ';'; }
 
 	/* primitive types */
-void							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
-u?int{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_PRIMITIVE; }
-float{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
-u?fixed{d}*:{d}*	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
+void								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
+u?int{d}*						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_PRIMITIVE; }
+float{d}*						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
+u?fixed{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
 
 	/* constants */
 {l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }

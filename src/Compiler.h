@@ -50,16 +50,13 @@ struct Compiler
 	Module *module;
 	std::string source;
 
-	Function *func;
-
-	std::vector<Typename> types;
+	std::list<BaseType> types;
 	std::vector<Scope> scopes;
 
 	void printScope();
 	Scope* getScope();
 	void pushScope();
 	void popScope();
-
 
 	void loadFile(std::string filename);
 	bool setTarget(std::string targetTriple = sys::getDefaultTargetTriple());	

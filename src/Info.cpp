@@ -7,8 +7,12 @@ namespace Cog
 
 Typename::Typename()
 {
-	retType = NULL;
-	recvType = NULL;
+	prim = NULL;
+	base = NULL;
+	pointerCount = 0;
+	isUnsigned = false;
+	isFixedPoint = false;
+	fixedPointPrecision = -1;
 }
 
 Typename::~Typename()
@@ -17,32 +21,47 @@ Typename::~Typename()
 
 bool operator==(const Typename &t1, const Typename &t2)
 {
-	return t1.retType == t2.retType
+	return t1.prim == t2.prim
+			&& t1.base == t2.base
+			&& t1.pointerCount == t2.pointerCount
+			&& t1.isUnsigned == t2.isUnsigned
+			&& t1.isFixedPoint == t2.isFixedPoint
+			&& t1.fixedPointPrecision == t2.fixedPointPrecision;
+}
+
+BaseType::BaseType()
+{
+	prim = NULL;
+}
+
+BaseType::~BaseType()
+{
+}
+
+bool operator==(const BaseType &t1, const BaseType &t2)
+{
+	return t1.prim == t2.prim
+			&& t1.retType == t2.retType
 			&& t1.name == t2.name
 			&& t1.recvType == t2.recvType
 			&& t1.argTypes == t2.argTypes;
 }
 
-Symbol::Symbol(std::string name, llvm::Value *value)
-{
-	this->type = value->getType();
-	this->name = name;
-	this->values.push_back(value);
-	this->curr = this->values.begin();
-}
-
-Symbol::Symbol(std::string name, llvm::Type *type)
+Symbol::Symbol(std::string name, Typename type)
 {
 	this->type = type;
 	this->name = name;
-	this->values.push_back(llvm::UndefValue::get(type));
+	this->inst = NULL;
+	this->values.push_back(llvm::UndefValue::get(type.prim));
 	this->curr = this->values.begin();
+	(*(this->curr))->setName(this->name);
 }
 
 Symbol::Symbol(const Symbol &copy)
 {
 	this->type = copy.type;
 	this->name = copy.name;
+	this->inst = copy.inst;
 	this->values = copy.values;
 	for (curr = values.begin(); curr != values.end() && *curr != *copy.curr; ++curr);
 }
@@ -86,7 +105,12 @@ Scope::Scope(Scope *from)
 	blocks.push_back(from->getBlock());
 	curr = blocks.begin();
 	for (std::vector<Symbol>::iterator i = from->symbols.begin(); i != from->symbols.end(); i++) {
-		symbols.push_back(Symbol(i->name, i->getValue()));
+		symbols.push_back(Symbol(i->name, i->type));
+		symbols.back().inst = i->inst;
+		if (i->values.size() > 0) {
+			symbols.back().values.push_back(i->getValue());
+			symbols.back().curr = symbols.back().values.begin();
+		}
 	}
 }
 
@@ -163,7 +187,7 @@ Symbol* Scope::findSymbol(std::string name)
 	return NULL;
 }
 
-Symbol *Scope::createSymbol(std::string name, llvm::Type *type)
+Symbol *Scope::createSymbol(std::string name, Typename type)
 {
 	symbols.push_back(Cog::Symbol(name, type));
 	return &symbols.back();
@@ -171,7 +195,6 @@ Symbol *Scope::createSymbol(std::string name, llvm::Type *type)
 
 Info::Info()
 {
-	type = NULL;
 	value = NULL;
 	symbol = NULL;
 	next = NULL;
