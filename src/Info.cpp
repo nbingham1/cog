@@ -1,6 +1,7 @@
 #include "Info.h"
 
 #include <llvm/IR/Constants.h>
+#include <sstream>
 
 namespace Cog
 {
@@ -10,13 +11,43 @@ Typename::Typename()
 	prim = NULL;
 	base = NULL;
 	pointerCount = 0;
+	isBool = false;
 	isUnsigned = false;
-	isFixedPoint = false;
-	fixedPointPrecision = -1;
+	fpExp = 0;
 }
 
 Typename::~Typename()
 {
+}
+
+std::string Typename::getName()
+{
+	std::ostringstream result;
+	if (prim && prim->isVoidTy()) {
+		result << "void";
+	} if (prim && prim->isFloatingPointTy()) {
+		result << "float" << prim->getPrimitiveSizeInBits();
+	} else if (prim && prim->isIntegerTy()) {
+		if (isBool)
+			result << "bool";
+		else {
+			if (isUnsigned)
+				result << "u";
+
+			if (fpExp == 0)
+				result << "int";
+			else
+				result << "fixed";
+
+			result << prim->getIntegerBitWidth();
+
+			if (fpExp != 0)
+				result << "e" << fpExp;
+		}
+	} else if (base) {
+		result << base->name;
+	}
+	return result.str();
 }
 
 bool operator==(const Typename &t1, const Typename &t2)
@@ -24,9 +55,19 @@ bool operator==(const Typename &t1, const Typename &t2)
 	return t1.prim == t2.prim
 			&& t1.base == t2.base
 			&& t1.pointerCount == t2.pointerCount
+			&& t1.isBool == t2.isBool
 			&& t1.isUnsigned == t2.isUnsigned
-			&& t1.isFixedPoint == t2.isFixedPoint
-			&& t1.fixedPointPrecision == t2.fixedPointPrecision;
+			&& t1.fpExp == t2.fpExp;
+}
+
+bool operator!=(const Typename &t1, const Typename &t2)
+{
+	return t1.prim != t2.prim
+			|| t1.base != t2.base
+			|| t1.pointerCount != t2.pointerCount
+			|| t1.isBool != t2.isBool
+			|| t1.isUnsigned != t2.isUnsigned
+			|| t1.fpExp != t2.fpExp;
 }
 
 BaseType::BaseType()

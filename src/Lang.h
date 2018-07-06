@@ -9,6 +9,10 @@ Info *getTypename(int token, char *txt);
 Info *getConstant(int token, char *txt);
 Info *getIdentifier(char *txt);
 
+Info *castType(Info *from, Info *to);
+bool canImplicitCast(Info *from, Info *to);
+void handleTypecheck(Info *left, Info *right, Info *expected = NULL);
+
 Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);
 

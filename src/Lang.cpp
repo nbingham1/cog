@@ -24,6 +24,10 @@ Info *getTypename(int token, char *txt)
 	if (token == VOID_PRIMITIVE) {
 		result->type.prim = Type::getVoidTy(cog.context);
 		return result;
+	} else if (token == BOOL_PRIMITIVE) {
+		result->type.prim = Type::getInt1Ty(cog.context);
+		result->type.isBool = true;
+		return result;
 	} else if (token == INT_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+4);
 		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
@@ -37,14 +41,12 @@ Info *getTypename(int token, char *txt)
 		unsigned int bitwidth = atoi(txt+6);
 		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
 		result->type.isUnsigned = true;
-		result->type.isFixedPoint = true;
-		result->type.fixedPointPrecision = bitwidth/4;
+		result->type.fpExp = bitwidth/4;
 		return result;
 	} else if (token == FIXED_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+5);
 		result->type.prim = Type::getIntNTy(cog.context, bitwidth);
-		result->type.isFixedPoint = true;
-		result->type.fixedPointPrecision = bitwidth/4;
+		result->type.fpExp = bitwidth/4;
 		return result;
 	} else if (token == FLOAT_PRIMITIVE) {
 		unsigned int bitwidth = atof(txt+5);
@@ -58,6 +60,9 @@ Info *getTypename(int token, char *txt)
 		case 64:
 			result->type.prim = Type::getDoubleTy(cog.context);
 			return result;
+		//case 80:
+		//	result->type.prim = Type::getFP80Ty(cog.context);
+		//	return result;
 		case 128:
 			result->type.prim = Type::getFP128Ty(cog.context);
 			return result;
@@ -102,6 +107,196 @@ Info *getIdentifier(char *txt)
 	return NULL;
 }
 
+Info *castType(Info *from, Info *to)
+{
+	llvm::Type *ft = from->type.prim;
+	llvm::Type *tt = to->type.prim;
+
+	if (ft == NULL || ft->isVoidTy() || ft->isLabelTy()
+	 || ft->isMetadataTy() || ft->isTokenTy()) {
+		printf("internal: %d:%d found non-valid type '%s'\n", line, column, from->type.getName().c_str());
+	} else if (tt == NULL || tt->isVoidTy() || tt->isLabelTy()
+	 || tt->isMetadataTy() || tt->isTokenTy()) {
+		printf("internal: %d:%d found non-valid type '%s'\n", line, column, to->type.getName().c_str());
+	} else if (ft != tt && (
+	    ft->isStructTy()		|| tt->isStructTy()
+	 || ft->isFunctionTy()	|| tt->isFunctionTy()
+	 || ft->isArrayTy()			|| tt->isArrayTy()
+	 || ft->isPointerTy()		|| tt->isPointerTy()
+	 || ft->isVectorTy()		|| tt->isVectorTy())) {
+		printf("error: %d:%d typecast '%s' to '%s' not yet supported\n",
+		  line, column, from->type.getName().c_str(), to->type.getName().c_str());
+	} else if (ft->isFloatingPointTy() && tt->isFloatingPointTy()) {
+		if (ft->getPrimitiveSizeInBits() < tt->getPrimitiveSizeInBits()) {
+			from->value = cog.builder.CreateFPExt(from->value, tt);
+			from->type = to->type;
+			from->symbol = NULL;
+		} else if (ft->getPrimitiveSizeInBits() > tt->getPrimitiveSizeInBits()) {
+			from->value = cog.builder.CreateFPTrunc(from->value, tt);
+			from->type = to->type;
+			from->symbol = NULL;
+		}
+	} else if (ft->isIntegerTy() && tt->isFloatingPointTy()) {
+		if (from->type.isBool) {
+			from->value = cog.builder.CreateSelect(from->value, ConstantFP::get(tt, 0.0), ConstantFP::getNaN(tt));
+		} else {
+			if (from->type.isUnsigned)
+				from->value = cog.builder.CreateUIToFP(from->value, tt);
+			else
+				from->value = cog.builder.CreateSIToFP(from->value, tt);
+
+			if (from->type.fpExp != 0)
+				from->value = cog.builder.CreateFMul(from->value, ConstantFP::get(tt, pow(2.0, (double)from->type.fpExp)));
+		}
+
+		from->type = to->type;
+		from->symbol = NULL;
+	} else if (ft->isFloatingPointTy() && tt->isIntegerTy()) {
+		if (to->type.isBool) {
+			from->value = cog.builder.CreateFCmpORD(from->value, from->value);
+		} else {
+			if (to->type.fpExp != 0)
+				from->value = cog.builder.CreateFMul(from->value, ConstantFP::get(ft, pow(2.0, (double)to->type.fpExp)));
+
+			if (to->type.isUnsigned)
+				from->value = cog.builder.CreateFPToUI(from->value, tt);
+			else
+				from->value = cog.builder.CreateFPToSI(from->value, tt);
+		}
+
+		from->type = to->type;
+		from->symbol = NULL;
+	} else if (ft->isIntegerTy() && tt->isIntegerTy()) {
+		if (!from->type.isBool && !to->type.isBool) {
+			if (!from->type.isUnsigned && to->type.isUnsigned) {
+				llvm::Value *flt0 = cog.builder.CreateICmpSLT(from->value, ConstantInt::get(ft, 0));
+				from->value = cog.builder.CreateSelect(flt0, cog.builder.CreateNeg(from->value), from->value);
+				from->type.isUnsigned = true;
+			}
+
+			if (ft->getIntegerBitWidth() < tt->getIntegerBitWidth()) {
+				if (from->type.isUnsigned)
+					from->value = cog.builder.CreateZExt(from->value, tt);
+				else
+					from->value = cog.builder.CreateSExt(from->value, tt);
+				ft = tt;
+				from->type.prim = tt;
+			}
+
+			if (from->type.fpExp > to->type.fpExp) {
+				from->value = cog.builder.CreateShl(from->value, from->type.fpExp - to->type.fpExp);
+			} else if (from->type.fpExp < to->type.fpExp) {
+				if (from->type.isUnsigned)
+					from->value = cog.builder.CreateLShr(from->value, to->type.fpExp - from->type.fpExp);	
+				else {
+					/*
+					if (from < 0) then (from >> (toExp-fromExp)) will truncate to -1
+					This means that 1e6 + -1e0 = 0
+					So we need to round toward zero instead of truncate.
+					
+					Assuming constants:
+					width = sizeof(from)
+					shift = (toExp - fromExp)
+					mask = ((1 << shift)-1)
+
+					Two possible implementations:
+					from = (((from >> width) & mask) + from) >> shift
+					from = (from < 0 ? from + mask : from) >> shift
+
+					Both are four instructions, but the second is more parallel:
+					ashr -> and -> add -> ashr
+					(cmplz, add) -> cmov -> ashr 
+					*/
+					int shift = (to->type.fpExp - from->type.fpExp);
+					int mask = ((1 << shift)-1);
+
+					llvm::Value *flt0 = cog.builder.CreateICmpSLT(from->value, ConstantInt::get(ft, 0));
+					llvm::Value *add = cog.builder.CreateAdd(from->value, ConstantInt::get(ft, mask));
+					from->value = cog.builder.CreateSelect(flt0, add, from->value);
+					from->value = cog.builder.CreateAShr(from->value, shift);
+				}
+				from->type.fpExp = to->type.fpExp;
+			}
+
+			if (ft->getIntegerBitWidth() > tt->getIntegerBitWidth()) {
+				from->value = cog.builder.CreateTrunc(from->value, tt);
+				ft = tt;
+				from->type.prim = tt;
+			}
+		}
+	}
+
+	return from;
+}
+
+bool canImplicitCast(Info *from, Info *to)
+{
+	return (
+	  (
+	    to->type.isBool &&
+	    from->type.prim->isFloatingPointTy()
+	  ) || (
+	    to->type.prim->isFloatingPointTy() && 
+	    (
+	      (from->type.prim->isFloatingPointTy() &&
+	       to->type.prim->getPrimitiveSizeInBits() >
+	       from->type.prim->getPrimitiveSizeInBits()
+	      ) ||
+	      from->type.prim->isIntegerTy()
+	    )
+	  ) || (
+	    to->type.prim->isIntegerTy() &&
+	    from->type.prim->isIntegerTy() &&
+	    from->type.prim->getIntegerBitWidth() < to->type.prim->getIntegerBitWidth() &&
+	    (
+	      from->type.isUnsigned == to->type.isUnsigned ||
+	      (from->type.isUnsigned && !to->type.isUnsigned)
+	    )
+		)
+	);
+}
+
+void handleTypecheck(Info *left, Info *right, Info *expect)
+{
+	llvm::Type *lt = left->type.prim;
+	llvm::Type *rt = right->type.prim;
+
+	if (lt == NULL || lt->isVoidTy() || lt->isLabelTy()
+	 || lt->isMetadataTy() || lt->isTokenTy()) {
+		printf("internal: %d:%d found non-valid type '%s'\n", line, column, left->type.getName().c_str());
+	} else if (rt == NULL || rt->isVoidTy() || rt->isLabelTy()
+	 || rt->isMetadataTy() || rt->isTokenTy()) {
+		printf("internal: %d:%d found non-valid type '%s'\n", line, column, right->type.getName().c_str());
+	} else if (lt != rt && (
+	    lt->isStructTy()		|| rt->isStructTy()
+	 || lt->isFunctionTy()	|| rt->isFunctionTy()
+	 || lt->isArrayTy()			|| rt->isArrayTy()
+	 || lt->isPointerTy()		|| rt->isPointerTy()
+	 || lt->isVectorTy()		|| rt->isVectorTy())) {
+		printf("error: %d:%d type promotion '%s', '%s' not yet supported\n",
+		  line, column, left->type.getName().c_str(), right->type.getName().c_str());
+	} else if (expect == NULL) {
+		if (canImplicitCast(right, left)) {
+			castType(right, left);
+		} else if (canImplicitCast(left, right)) {
+			castType(left, right);
+		}
+
+		if (left->type != right->type)
+			printf("error: %d:%d type mismatch '%s' != '%s'\n", line, column, left->type.getName().c_str(), right->type.getName().c_str());
+	} else {
+		if (canImplicitCast(left, expect))
+			castType(left, expect);
+		else
+			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, left->type.getName().c_str(), expect->type.getName().c_str());
+	
+		if (canImplicitCast(right, expect))
+			castType(right, expect);
+		else
+			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, right->type.getName().c_str(), expect->type.getName().c_str());
+	}
+}
+
 Info *unaryOperator(int op, Info *arg)
 {
 	if (arg) {
@@ -138,33 +333,78 @@ Info *binaryOperator(Info *left, int op, Info *right)
 		Value *lsb = NULL;
 		Value *msb = NULL;
 
+		Info booleanType;
+		booleanType.type.prim = Type::getInt1Ty(cog.context);
+		booleanType.type.isBool = true;
+
 		switch (op) {
 		case OR:
+			handleTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateOr(left->value, right->value);
 			break;
 		case XOR:
+			handleTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateXor(left->value, right->value);
 			break;
 		case AND:
+			handleTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateAnd(left->value, right->value);
 			break;
 		case '<':
-			left->value = cog.builder.CreateICmpSLT(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpOLT(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateICmpULT(left->value, right->value);
+			else
+				left->value = cog.builder.CreateICmpSLT(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case '>':
-			left->value = cog.builder.CreateICmpSGT(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpOGT(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateICmpUGT(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateICmpSGT(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case LE:
-			left->value = cog.builder.CreateICmpSLE(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpOLE(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateICmpULE(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateICmpSLE(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case GE:
-			left->value = cog.builder.CreateICmpSGE(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpOGE(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateICmpUGE(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateICmpSGE(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case EQ:
-			left->value = cog.builder.CreateICmpEQ(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpOEQ(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateICmpEQ(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case NE:
-			left->value = cog.builder.CreateICmpNE(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFCmpUNE(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateICmpNE(left->value, right->value);
+			left->type = booleanType.type;
 			break;
 		case '|':
 			left->value = cog.builder.CreateOr(left->value, right->value);
@@ -199,19 +439,43 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->value = cog.builder.CreateOr(msb, lsb);
 			break;
 		case '+':
-			left->value = cog.builder.CreateAdd(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFAdd(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateAdd(left->value, right->value);
 			break;
 		case '-':
-			left->value = cog.builder.CreateSub(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFSub(left->value, right->value);
+			else 
+				left->value = cog.builder.CreateSub(left->value, right->value);
 			break;
 		case '*':
-			left->value = cog.builder.CreateMul(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFMul(left->value, right->value);
+			else
+				left->value = cog.builder.CreateMul(left->value, right->value);
 			break;
 		case '/':
-			left->value = cog.builder.CreateSDiv(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFDiv(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateUDiv(left->value, right->value);
+			else
+				left->value = cog.builder.CreateSDiv(left->value, right->value);
 			break;
 		case '%':
-			left->value = cog.builder.CreateSRem(left->value, right->value);
+			handleTypecheck(left, right);
+			if (left->type.prim->isFloatingPointTy())
+				left->value = cog.builder.CreateFRem(left->value, right->value);
+			else if (left->type.isUnsigned)
+				left->value = cog.builder.CreateURem(left->value, right->value);
+			else
+				left->value = cog.builder.CreateSRem(left->value, right->value);
 			break;
 		default:
 			printf("error: %d:%d unrecognized operator\n", line, column); 
@@ -258,6 +522,10 @@ void assignSymbol(Info *symbol, Info *value)
 {
 	if (symbol && value) {
 		if (symbol->type == value->type) {
+			symbol->symbol->setValue(value->value);
+			value->value->setName(symbol->symbol->name + "_");
+		} else if (canImplicitCast(value, symbol)) {
+			castType(value, symbol);
 			symbol->symbol->setValue(value->value);
 			value->value->setName(symbol->symbol->name + "_");
 		} else {
@@ -331,6 +599,14 @@ void functionDefinition()
 void returnValue(Info *value)
 {
 	if (value) {
+		// TODO cast to function return type
+		/*
+		if (canImplicitCast(cond, retType))
+			castType(cond, retType);
+		else
+			printf("error: %d:%d unable to cast to expected type\n", line, column);
+		*/
+
 		cog.builder.CreateRet(value->value);
 	} else {
 		printf("error: %d:%d previous failure\n", line, column); 
@@ -344,6 +620,8 @@ void returnVoid()
 
 void callFunction(char *txt, Info *args)
 {
+	// TODO search for implicit Casts
+
 	std::vector<Value*> argValues;
 	Info *curr = args;
 	while (curr != NULL) {
@@ -365,6 +643,15 @@ void ifCondition(Info *cond)
 	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
 	cog.getScope()->appendBlock(thenBlock);
 	cog.getScope()->appendBlock(elseBlock);
+
+	Info booleanType;
+	booleanType.type.prim = Type::getInt1Ty(cog.context);
+	booleanType.type.isBool = true;
+
+	if (canImplicitCast(cond, &booleanType))
+		castType(cond, &booleanType);
+	else if (cond->type != booleanType.type)
+		printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, cond->type.getName().c_str(), booleanType.type.getName().c_str());
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->popBlock();
@@ -449,6 +736,15 @@ void whileCondition(Info *cond)
 	BasicBlock *elseBlock = BasicBlock::Create(cog.context, "else", func);
 	cog.getScope()->appendBlock(thenBlock);
 	cog.getScope()->appendBlock(elseBlock);
+
+	Info booleanType;
+	booleanType.type.prim = Type::getInt1Ty(cog.context);
+	booleanType.type.isBool = true;
+
+	if (canImplicitCast(cond, &booleanType))
+		castType(cond, &booleanType);
+	else if (cond->type != booleanType.type)
+		printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, cond->type.getName().c_str(), booleanType.type.getName().c_str());
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->nextBlock();

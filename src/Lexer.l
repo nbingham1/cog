@@ -68,10 +68,11 @@ e			[Ee][-+]?{d}+
 ";"										{ column += yyleng; return ';'; }
 
 	/* primitive types */
-void								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
-u?int{d}*						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_PRIMITIVE; }
-float{d}*						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
-u?fixed{d}*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
+void									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
+bool									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_PRIMITIVE; }
+u?int{d}*							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return INT_PRIMITIVE; }
+float{d}*							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
+u?fixed{d}*(e-?{d}*)?	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
 
 	/* constants */
 {l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }

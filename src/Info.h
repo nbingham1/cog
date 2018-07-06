@@ -24,12 +24,15 @@ struct Typename
 
 	int pointerCount;
 
+	bool isBool;
 	bool isUnsigned;
-	bool isFixedPoint;
-	int fixedPointPrecision;
+	int fpExp;
+
+	std::string getName();
 };
 
 bool operator==(const Typename &t1, const Typename &t2);
+bool operator!=(const Typename &t1, const Typename &t2);
 
 /*
 
