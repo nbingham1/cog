@@ -256,7 +256,29 @@ bool canImplicitCast(Info *from, Info *to)
 	);
 }
 
-void handleTypecheck(Info *left, Info *right, Info *expect)
+void unaryTypecheck(Info *arg, Info *expect)
+{
+	llvm::Type *at = arg->type.prim;
+	if (at == NULL || at->isVoidTy() || at->isLabelTy()
+	 || at->isMetadataTy() || at->isTokenTy()) {
+		printf("internal: %d:%d found non-valid type '%s'\n", line, column, arg->type.getName().c_str());
+	} else if (at != expect->type.prim && (
+	    at->isStructTy()
+	 || at->isFunctionTy()
+	 || at->isArrayTy()
+	 || at->isPointerTy()
+	 || at->isVectorTy())) {
+		printf("error: %d:%d type promotion '%s', '%s' not yet supported\n",
+		  line, column, arg->type.getName().c_str(), expect->type.getName().c_str());
+	} else {
+		if (canImplicitCast(arg, expect))
+			castType(arg, expect);
+		else if (arg->type != expect->type)
+			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, arg->type.getName().c_str(), expect->type.getName().c_str());
+	}
+}
+
+void binaryTypecheck(Info *left, Info *right, Info *expect)
 {
 	llvm::Type *lt = left->type.prim;
 	llvm::Type *rt = right->type.prim;
@@ -299,6 +321,10 @@ void handleTypecheck(Info *left, Info *right, Info *expect)
 
 Info *unaryOperator(int op, Info *arg)
 {
+	Info booleanType;
+	booleanType.type.prim = Type::getInt1Ty(cog.context);
+	booleanType.type.isBool = true;
+
 	if (arg) {
 		switch (op) {
 			case '-':
@@ -308,7 +334,7 @@ Info *unaryOperator(int op, Info *arg)
 				arg->value = cog.builder.CreateNot(arg->value);
 				break;
 			case NOT:
-				// TODO cast to boolean (int1)
+				unaryTypecheck(arg, &booleanType);
 				arg->value = cog.builder.CreateNot(arg->value);
 				break;
 			default:
@@ -339,19 +365,19 @@ Info *binaryOperator(Info *left, int op, Info *right)
 
 		switch (op) {
 		case OR:
-			handleTypecheck(left, right, &booleanType);
+			binaryTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateOr(left->value, right->value);
 			break;
 		case XOR:
-			handleTypecheck(left, right, &booleanType);
+			binaryTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateXor(left->value, right->value);
 			break;
 		case AND:
-			handleTypecheck(left, right, &booleanType);
+			binaryTypecheck(left, right, &booleanType);
 			left->value = cog.builder.CreateAnd(left->value, right->value);
 			break;
 		case '<':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpOLT(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -361,7 +387,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case '>':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpOGT(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -371,7 +397,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case LE:
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpOLE(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -381,7 +407,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case GE:
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpOGE(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -391,7 +417,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case EQ:
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpOEQ(left->value, right->value);
 			else 
@@ -399,7 +425,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case NE:
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFCmpUNE(left->value, right->value);
 			else 
@@ -439,28 +465,28 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->value = cog.builder.CreateOr(msb, lsb);
 			break;
 		case '+':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFAdd(left->value, right->value);
 			else 
 				left->value = cog.builder.CreateAdd(left->value, right->value);
 			break;
 		case '-':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFSub(left->value, right->value);
 			else 
 				left->value = cog.builder.CreateSub(left->value, right->value);
 			break;
 		case '*':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFMul(left->value, right->value);
 			else
 				left->value = cog.builder.CreateMul(left->value, right->value);
 			break;
 		case '/':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFDiv(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -469,7 +495,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 				left->value = cog.builder.CreateSDiv(left->value, right->value);
 			break;
 		case '%':
-			handleTypecheck(left, right);
+			binaryTypecheck(left, right);
 			if (left->type.prim->isFloatingPointTy())
 				left->value = cog.builder.CreateFRem(left->value, right->value);
 			else if (left->type.isUnsigned)
@@ -501,7 +527,7 @@ void declareSymbol(Info *type, char *name)
 {
 	if (type && name) {
 		if (cog.getScope()->findSymbol(name) != NULL) {
-			printf("error: %d:%d variable already defined\n", line, column); 
+			printf("error: %d:%d variable '%s' already defined\n", line, column, name); 
 			// already defined
 		}
 
@@ -521,17 +547,9 @@ void declareSymbol(Info *type, char *name)
 void assignSymbol(Info *symbol, Info *value)
 {
 	if (symbol && value) {
-		if (symbol->type == value->type) {
-			symbol->symbol->setValue(value->value);
-			value->value->setName(symbol->symbol->name + "_");
-		} else if (canImplicitCast(value, symbol)) {
-			castType(value, symbol);
-			symbol->symbol->setValue(value->value);
-			value->value->setName(symbol->symbol->name + "_");
-		} else {
-			printf("error: %d:%d typecheck failed\n", line, column); 
-			// typecheck failed
-		}
+		unaryTypecheck(value, symbol);
+		symbol->symbol->setValue(value->value);
+		value->value->setName(symbol->symbol->name + "_");
 	} else {
 		printf("error: %d:%d previous failure\n", line, column); 
 		if (symbol)
@@ -600,12 +618,7 @@ void returnValue(Info *value)
 {
 	if (value) {
 		// TODO cast to function return type
-		/*
-		if (canImplicitCast(cond, retType))
-			castType(cond, retType);
-		else
-			printf("error: %d:%d unable to cast to expected type\n", line, column);
-		*/
+		// unaryTypecheck(cond, retType);
 
 		cog.builder.CreateRet(value->value);
 	} else {
@@ -648,10 +661,7 @@ void ifCondition(Info *cond)
 	booleanType.type.prim = Type::getInt1Ty(cog.context);
 	booleanType.type.isBool = true;
 
-	if (canImplicitCast(cond, &booleanType))
-		castType(cond, &booleanType);
-	else if (cond->type != booleanType.type)
-		printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, cond->type.getName().c_str(), booleanType.type.getName().c_str());
+	unaryTypecheck(cond, &booleanType);
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->popBlock();
@@ -741,10 +751,7 @@ void whileCondition(Info *cond)
 	booleanType.type.prim = Type::getInt1Ty(cog.context);
 	booleanType.type.isBool = true;
 
-	if (canImplicitCast(cond, &booleanType))
-		castType(cond, &booleanType);
-	else if (cond->type != booleanType.type)
-		printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, cond->type.getName().c_str(), booleanType.type.getName().c_str());
+	unaryTypecheck(cond, &booleanType);
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->nextBlock();
