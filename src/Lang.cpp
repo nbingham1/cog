@@ -13,9 +13,29 @@ extern int column;
 namespace Cog
 {
 
+APInt APInt_pow(APInt base, unsigned int exp)
+{
+    APInt result(1, 1);
+    for (;;)
+    {
+        if (exp & 1) {
+					unsigned int newWidth = result.getBitWidth() + base.getBitWidth();
+          result = result.zext(newWidth) * base.zext(newWidth);
+					result = result.trunc(result.ceilLogBase2());
+				}
+        exp >>= 1;
+        if (!exp)
+            break;
+				base = base.zext(2*base.getBitWidth());
+        base *= base;
+				base = base.trunc(base.ceilLogBase2());
+    }
+
+    return result;
+}
+
 Info *getTypename(int token, char *txt)
 {
-	// TODO distinction between signed & unsigned integers
 	// TODO fixed point integer math set precision
 	// TODO pointer types
 	// TODO structure types
@@ -83,9 +103,98 @@ Info *getTypename(int token, char *txt)
 Info *getConstant(int token, char *txt)
 {
 	Info *result = new Info();
-	//result->value = ConstantFP::get(Type::getDoubleTy(cog.context), atof(txt));
-	result->value = ConstantInt::get(Type::getInt32Ty(cog.context), atoi(txt));
+	
+	char *curr = txt;
+	bool isFractional = false;
+	
+	std::string valueStr = "";
+	unsigned int radix = 10;
+	int exponent = 0;
+	
+	switch (token) {
+	case BOOL_CONSTANT:
+		if (txt[0] == 't' || txt[0] == 'T' || txt[0] == 'y' || txt[0] == 'Y' || txt[0] == '1')
+			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 1);
+		else
+			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 0);
+		result->type.prim = result->value->getType();
+		result->type.isBool = true;
+		break;
+	case HEX_CONSTANT:
+		radix = 16;
+		curr += 2;
+		valueStr = curr;
+		break;
+	case BIN_CONSTANT:
+		radix = 2;
+		curr += 2;
+		valueStr = curr;
+		break;
+	case DEC_CONSTANT:
+		while ((*curr >= '0' && *curr <= '9') || *curr == '.') {
+			if (*curr == '.')
+				isFractional = true;
+			else {
+				exponent -= isFractional;
+				valueStr.push_back(*curr);
+			}
+
+			++curr;
+		}
+
+		if (*curr == 'e' || *curr == 'E')
+			exponent += atoi(curr+1);
+		break;
+	default:
+		printf("internal: %d:%d unrecognized constant token\n", line, column);
+		delete txt;
+		return result;
+	}
+	
+	int bitwidth = APInt::getBitsNeeded(valueStr, radix);
+	APInt value(bitwidth, valueStr, radix);
+	int valueShift = -value.countTrailingZeros();
+	// this assumes that radix > 0
+	int radixShift = __builtin_ctz(radix);
+
+	if (exponent >= 0) {
+		radix = radix >> radixShift;
+		APInt valueCoeff(32 - __builtin_clz(radix), radix);
+		valueCoeff = APInt_pow(valueCoeff, exponent);
+		value = value.lshr(-valueShift);
+		value = value.zextOrTrunc(value.getBitWidth() + valueShift + valueCoeff.getBitWidth());
+		valueCoeff = valueCoeff.zext(value.getBitWidth());
+		value *= valueCoeff;
+	} else {
+		radix = radix >> radixShift;
+		APInt valueCoeff(32 - __builtin_clz(radix), radix);
+		valueCoeff = APInt_pow(valueCoeff, -exponent);
+		valueShift += valueCoeff.getBitWidth();
+		if (valueShift < 0) {
+			value = value.lshr(-valueShift);
+			value = value.trunc(value.getBitWidth() + valueShift);
+		} else if (valueShift > 0) {
+			value = value.zext(value.getBitWidth() + valueShift);
+			value = value.shl(valueShift);
+		}
+
+		value = value.udiv(valueCoeff.zext(value.getBitWidth()));
+		value = value.trunc(value.ceilLogBase2());
+	}
+
+	radix = 2;
+	exponent -= valueShift;
+
+	valueShift = value.countTrailingZeros();
+	value = value.lshr(valueShift);
+	value = value.trunc(value.getBitWidth() - valueShift);
+	exponent += valueShift;
+
+	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
 	result->type.prim = result->value->getType();
+	result->type.fpExp = exponent;
+	result->type.isUnsigned = true;
+	
 	delete txt;
 	return result;
 }
