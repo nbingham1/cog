@@ -5,6 +5,7 @@ void yyerror(char*);
 
 int column = 0;
 int line = 0;
+const char *str = "";
 %}
 
 l			[a-zA-Z_]
@@ -20,6 +21,7 @@ e			[Ee]-?{d}+
 "else"								{ column += yyleng; return ELSE; }
 "while"								{ column += yyleng; return WHILE; }
 "return"							{ column += yyleng; return RETURN; }
+"asm"									{ column += yyleng; return ASM; }
 
 "{"										{ column += yyleng; return '{'; }
 "}"										{ column += yyleng; return '}'; }
@@ -67,6 +69,8 @@ e			[Ee]-?{d}+
 
 ";"										{ column += yyleng; return ';'; }
 
+","										{ column += yyleng; return ','; }
+
 	/* primitive types */
 void									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
 bool									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_PRIMITIVE; }
@@ -74,7 +78,14 @@ u?int{d}*							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); ret
 float{d}*							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FLOAT_PRIMITIVE; }
 u?fixed{d}*{e}?				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
 
+	/* inline assembly */
+\%{l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_REGISTER; }
+\$-?(0[xX]{x}+|{d}+)	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_CONSTANT; }
+\.{l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_DIRECTIVE; }
+{l}({l}|{d})*:			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_LABEL; }
+
 	/* constants */
+\"(\\.|[^\\"])*\"		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return STRING_CONSTANT; }
 "true"							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
 "false"							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
 {l}({l}|{d})*				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
@@ -87,7 +98,7 @@ u?fixed{d}*{e}?				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); 
 {d}+"."{d}*{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
 
 	/* misc */
-[\n]									{ ++line; column = 0; }
+[\n]									{ ++line; column = 0; str = yytext+1; }
 [ \t\v\f]							{ column += yyleng; }
 .											{ column += yyleng; /* ignore unmatched characters */ }
 

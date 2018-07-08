@@ -10,13 +10,15 @@ int yylex(void);
 extern FILE* yyin;
 extern int line;
 extern int column;
+extern const char* str;
 
 %}
 
 %token VOID_PRIMITIVE BOOL_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE
-%token IDENTIFIER HEX_CONSTANT DEC_CONSTANT BIN_CONSTANT BOOL_CONSTANT
-%token STRUCT IF ELSE WHILE RETURN AND XOR OR NOT
+%token IDENTIFIER HEX_CONSTANT DEC_CONSTANT BIN_CONSTANT BOOL_CONSTANT STRING_CONSTANT
+%token ASM STRUCT IF ELSE WHILE RETURN AND XOR OR NOT
 %token LE GE NE EQ SHL ASHR LSHR ROL ROR
+%token ASM_REGISTER ASM_CONSTANT ASM_DIRECTIVE ASM_LABEL
 %left '+' '-'
 %left '*' '/' '%'
 %union {
@@ -25,7 +27,7 @@ extern int column;
 	Cog::Info *info;
 }
 
-%type<syntax> VOID_PRIMITIVE BOOL_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE IDENTIFIER HEX_CONSTANT DEC_CONSTANT BIN_CONSTANT BOOL_CONSTANT
+%type<syntax> VOID_PRIMITIVE BOOL_PRIMITIVE INT_PRIMITIVE FLOAT_PRIMITIVE FIXED_PRIMITIVE IDENTIFIER HEX_CONSTANT DEC_CONSTANT BIN_CONSTANT BOOL_CONSTANT STRING_CONSTANT ASM_REGISTER ASM_CONSTANT ASM_DIRECTIVE ASM_LABEL
 
 %%
 
@@ -68,6 +70,7 @@ statement_list
 primary_statement
 	: variable_declaration ';'
 	| assignment ';'
+	| asm_block
 	| call ';'
 	| ret ';'
 	| if_statement
@@ -136,8 +139,46 @@ assignment
 	: instance '=' expression { Cog::assignSymbol($<info>1, $<info>3); }
 	;
 
+asm_block
+	: ASM '{' asm_statement_list '}'
+	;
+
+asm_statement_list
+	: asm_statement_list asm_statement
+	| asm_statement_list ';' asm_statement
+	| asm_statement
+	;
+
+asm_statement
+	: ASM_LABEL asm_instruction { printf("%s\n", $<syntax>1); }
+	| asm_instruction
+	;
+
+asm_instruction
+	: ASM_DIRECTIVE STRING_CONSTANT
+	| ASM_DIRECTIVE IDENTIFIER
+	| ASM_DIRECTIVE DEC_CONSTANT
+	| ASM_DIRECTIVE HEX_CONSTANT
+	| IDENTIFIER asm_argument_list	{ printf("%s\n", $<syntax>1); }
+	| IDENTIFIER	{ printf("%s\n", $<syntax>1); }
+	;
+
+asm_argument_list
+	: asm_argument_list ',' asm_argument
+	| asm_argument
+	;
+
+asm_argument
+	: ASM_REGISTER	{ printf("%s\n", $<syntax>1); }
+	| ASM_CONSTANT	{ printf("%s\n", $<syntax>1); }
+	| IDENTIFIER	{ printf("%s\n", $<syntax>1); }
+	| '-' DEC_CONSTANT '(' asm_argument_list ')'	{ printf("%s\n", $<syntax>2); }
+	| DEC_CONSTANT '(' asm_argument_list ')'	{ printf("%s\n", $<syntax>1); }
+	| '(' asm_argument_list ')'
+	;
+
 call
-	: IDENTIFIER '(' instance_list ')' { Cog::callFunction($<syntax>1, $<info>3); }
+	: IDENTIFIER '(' argument_list ')' { Cog::callFunction($<syntax>1, $<info>3); }
 	| IDENTIFIER '(' ')' { Cog::callFunction($<syntax>1, NULL); }
 	;
 
@@ -245,16 +286,17 @@ primary_expression
 	| '(' expression ')'	{ $<info>$ = $<info>2; }
 	;
 
+argument_list
+	: argument_list ',' expression { $<info>$ = Cog::infoList($<info>1, $<info>3); }
+	| expression { $<info>$ = $<info>1; }
+	;
+
 constant
 	: BOOL_CONSTANT	{ $<info>$ = Cog::getConstant(BOOL_CONSTANT, $<syntax>1); }
 	| HEX_CONSTANT	{ $<info>$ = Cog::getConstant(HEX_CONSTANT, $<syntax>1); }
 	| DEC_CONSTANT	{ $<info>$ = Cog::getConstant(DEC_CONSTANT, $<syntax>1); }
 	| BIN_CONSTANT	{ $<info>$ = Cog::getConstant(BIN_CONSTANT, $<syntax>1); }
-	;
-
-instance_list
-	: instance_list ',' instance { $<info>$ = Cog::infoList($<info>1, $<info>3); }
-	| instance { $<info>$ = $<info>1; }
+	| STRING_CONSTANT	{ $<info>$ = Cog::getConstant(STRING_CONSTANT, $<syntax>1); }
 	;
 
 instance
@@ -273,6 +315,17 @@ type_specifier
 %%
 
 void yyerror(const char *s) {
-	fprintf(stderr, "%d:%d: %s, found '%c'\n", line, column, s, yychar);
+	fprintf(stderr, "%d:%d: %s\n", line, column, s);
+	fprintf(stderr, "%s\n", str);
+	for (int i = 0; i < column-1; i++) {
+		if (str[i] <= ' ' || str[i] == 127)
+			fputc(str[i], stderr);
+		else
+			fputc(' ', stderr);
+	}
+	fputc('^', stderr);
+	for (const char *c = str+column+1; c; c++)
+		fputc('~', stderr);
+	fputc('\n', stderr);
 }
 

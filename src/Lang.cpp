@@ -4,14 +4,27 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <iostream>
 #include <llvm/ADT/Twine.h>
 
 extern Cog::Compiler cog;
 extern int line;
 extern int column;
+extern const char *str;
+
+using std::endl;
 
 namespace Cog
 {
+
+std::ostream &error_(const char *dfile, int dline)
+{
+	std::cout << str << endl;
+	std::cout << dfile << ":" << dline << " error " << line << ":" << column << ": ";
+	return std::cout;
+}
+
+#define error() error_(__FILE__, __LINE__)
 
 APInt APInt_pow(APInt base, unsigned int exp)
 {
@@ -87,17 +100,35 @@ Info *getTypename(int token, char *txt)
 			result->type.prim = Type::getFP128Ty(cog.context);
 			return result;
 		default:
-			printf("error: %d:%d floating point types must be 16, 32, 64, or 128 bits.\n", line, column); 
+			error() << "floating point types must be 16, 32, 64, or 128 bits." << endl;
 		}
 	} else if (token == IDENTIFIER) {
 		
 	} else {
-		printf("error: %d:%d undefined type\n", line, column); 
+		error() << "undefined type." << endl;
 	}
 
 	delete result;
 	delete txt;
 	return NULL;
+}
+
+Info *getConstant(uint64_t cnst)
+{
+	Info *result = new Info();
+	
+	APInt value(64, cnst, false);
+	int valueShift = value.countTrailingZeros();
+	value = value.lshr(valueShift);
+	value = value.trunc(value.ceilLogBase2());
+	int exponent = valueShift;
+
+	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
+	result->type.prim = result->value->getType();
+	result->type.fpExp = exponent;
+	result->type.isUnsigned = true;
+	
+	return result;
 }
 
 Info *getConstant(int token, char *txt)
@@ -146,7 +177,7 @@ Info *getConstant(int token, char *txt)
 			exponent += atoi(curr+1);
 		break;
 	default:
-		printf("internal: %d:%d unrecognized constant token\n", line, column);
+		error() << "unrecognized constant token." << endl;
 		delete txt;
 		return result;
 	}
@@ -194,6 +225,8 @@ Info *getConstant(int token, char *txt)
 	result->type.prim = result->value->getType();
 	result->type.fpExp = exponent;
 	result->type.isUnsigned = true;
+
+	printf("%s: %s*2^%d width: %d\n", result->type.getName().c_str(), value.toString(10, false).c_str(), result->type.fpExp, value.getBitWidth());
 	
 	delete txt;
 	return result;
@@ -211,7 +244,7 @@ Info *getIdentifier(char *txt)
 		return result;
 	}
 
-	printf("error: %d:%d undefined variable\n", line, column); 
+	error() << "undefined variable '" << txt << "'." << endl;
 	delete txt;
 	return NULL;
 }
@@ -223,18 +256,17 @@ Info *castType(Info *from, Info *to)
 
 	if (ft == NULL || ft->isVoidTy() || ft->isLabelTy()
 	 || ft->isMetadataTy() || ft->isTokenTy()) {
-		printf("internal: %d:%d found non-valid type '%s'\n", line, column, from->type.getName().c_str());
+		error() << "found non-valid type '" << from->type.getName() << "'." << endl;
 	} else if (tt == NULL || tt->isVoidTy() || tt->isLabelTy()
 	 || tt->isMetadataTy() || tt->isTokenTy()) {
-		printf("internal: %d:%d found non-valid type '%s'\n", line, column, to->type.getName().c_str());
+		error() << "found non-valid type '" << from->type.getName() << "'." << endl;
 	} else if (ft != tt && (
 	    ft->isStructTy()		|| tt->isStructTy()
 	 || ft->isFunctionTy()	|| tt->isFunctionTy()
 	 || ft->isArrayTy()			|| tt->isArrayTy()
 	 || ft->isPointerTy()		|| tt->isPointerTy()
 	 || ft->isVectorTy()		|| tt->isVectorTy())) {
-		printf("error: %d:%d typecast '%s' to '%s' not yet supported\n",
-		  line, column, from->type.getName().c_str(), to->type.getName().c_str());
+		error() << "typecast '" << from->type.getName() << "' to '" << to->type.getName() << "' not yet supported." << endl;
 	} else if (ft->isFloatingPointTy() && tt->isFloatingPointTy()) {
 		if (ft->getPrimitiveSizeInBits() < tt->getPrimitiveSizeInBits()) {
 			from->value = cog.builder.CreateFPExt(from->value, tt);
@@ -324,14 +356,16 @@ Info *castType(Info *from, Info *to)
 					from->value = cog.builder.CreateSelect(flt0, add, from->value);
 					from->value = cog.builder.CreateAShr(from->value, shift);
 				}
-				from->type.fpExp = to->type.fpExp;
 			}
+			from->type.fpExp = to->type.fpExp;
 
 			if (ft->getIntegerBitWidth() > tt->getIntegerBitWidth()) {
 				from->value = cog.builder.CreateTrunc(from->value, tt);
 				ft = tt;
 				from->type.prim = tt;
 			}
+
+			from->type.isUnsigned = to->type.isUnsigned;
 		}
 	}
 
@@ -370,20 +404,19 @@ void unaryTypecheck(Info *arg, Info *expect)
 	llvm::Type *at = arg->type.prim;
 	if (at == NULL || at->isVoidTy() || at->isLabelTy()
 	 || at->isMetadataTy() || at->isTokenTy()) {
-		printf("internal: %d:%d found non-valid type '%s'\n", line, column, arg->type.getName().c_str());
+		error() << "foun non-valid type '" << arg->type.getName() << "'." << endl;
 	} else if (at != expect->type.prim && (
 	    at->isStructTy()
 	 || at->isFunctionTy()
 	 || at->isArrayTy()
 	 || at->isPointerTy()
 	 || at->isVectorTy())) {
-		printf("error: %d:%d type promotion '%s', '%s' not yet supported\n",
-		  line, column, arg->type.getName().c_str(), expect->type.getName().c_str());
+		error() << "type promotion '" << arg->type.getName() << "' to '" << expect->type.getName() << "' not yet supported." << endl;
 	} else {
 		if (canImplicitCast(arg, expect))
 			castType(arg, expect);
 		else if (arg->type != expect->type)
-			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, arg->type.getName().c_str(), expect->type.getName().c_str());
+			error() << "unable to cast '" << arg->type.getName() << "' to '" << expect->type.getName() << "'." << endl;
 	}
 }
 
@@ -394,18 +427,17 @@ void binaryTypecheck(Info *left, Info *right, Info *expect)
 
 	if (lt == NULL || lt->isVoidTy() || lt->isLabelTy()
 	 || lt->isMetadataTy() || lt->isTokenTy()) {
-		printf("internal: %d:%d found non-valid type '%s'\n", line, column, left->type.getName().c_str());
+		error() << "found non-valid type '" << left->type.getName() << "'." << endl;
 	} else if (rt == NULL || rt->isVoidTy() || rt->isLabelTy()
 	 || rt->isMetadataTy() || rt->isTokenTy()) {
-		printf("internal: %d:%d found non-valid type '%s'\n", line, column, right->type.getName().c_str());
+		error() << "found non-valid type '" << right->type.getName() << "'." << endl;
 	} else if (lt != rt && (
 	    lt->isStructTy()		|| rt->isStructTy()
 	 || lt->isFunctionTy()	|| rt->isFunctionTy()
 	 || lt->isArrayTy()			|| rt->isArrayTy()
 	 || lt->isPointerTy()		|| rt->isPointerTy()
 	 || lt->isVectorTy()		|| rt->isVectorTy())) {
-		printf("error: %d:%d type promotion '%s', '%s' not yet supported\n",
-		  line, column, left->type.getName().c_str(), right->type.getName().c_str());
+		error() << "type promotion '" << left->type.getName() << "', '" << right->type.getName() << "' not yet supported." << endl;
 	} else if (expect == NULL) {
 		if (canImplicitCast(right, left)) {
 			castType(right, left);
@@ -414,17 +446,17 @@ void binaryTypecheck(Info *left, Info *right, Info *expect)
 		}
 
 		if (left->type != right->type)
-			printf("error: %d:%d type mismatch '%s' != '%s'\n", line, column, left->type.getName().c_str(), right->type.getName().c_str());
+			error() << "type mismatch '" << left->type.getName() << "' != '" << right->type.getName() << "'." << endl;
 	} else {
 		if (canImplicitCast(left, expect))
 			castType(left, expect);
 		else
-			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, left->type.getName().c_str(), expect->type.getName().c_str());
+			error() << "unable to cast '" << left->type.getName() << "' to '" << expect->type.getName() << "'." << endl;
 	
 		if (canImplicitCast(right, expect))
 			castType(right, expect);
 		else
-			printf("error: %d:%d unable to cast '%s' to '%s'\n", line, column, right->type.getName().c_str(), expect->type.getName().c_str());
+			error() << "unable to cast '" << right->type.getName() << "' to '" << expect->type.getName() << "'." << endl;
 	}
 }
 
@@ -447,7 +479,7 @@ Info *unaryOperator(int op, Info *arg)
 				arg->value = cog.builder.CreateNot(arg->value);
 				break;
 			default:
-				printf("error: %d:%d unrecognized operator\n", line, column); 
+				error() << "unrecognized unary operator '" << (char)op << "'." << endl;
 				delete arg;
 				return NULL;
 		}
@@ -455,7 +487,7 @@ Info *unaryOperator(int op, Info *arg)
 		arg->symbol = NULL;
 		return arg;
 	} else {
-		printf("error: %d:%d previous failure\n", line, column); 
+		error() << "here" << endl;
 		return NULL;
 	}
 }
@@ -542,32 +574,40 @@ Info *binaryOperator(Info *left, int op, Info *right)
 			left->type = booleanType.type;
 			break;
 		case '|':
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateOr(left->value, right->value);
 			break;
 		case '^':
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateXor(left->value, right->value);
 			break;
 		case '&':
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateAnd(left->value, right->value);
 			break;
 		case SHL:
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateShl(left->value, right->value);
 			break;
 		case ASHR:
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateAShr(left->value, right->value);
 			break;
 		case LSHR:
+			binaryTypecheck(left, right);
 			left->value = cog.builder.CreateLShr(left->value, right->value);
 			break;
 		case ROR:
-			width = ConstantInt::get(cog.context, APInt(32, (int)left->value->getType()->getIntegerBitWidth(), true));
+			binaryTypecheck(left, right);
+			width = ConstantInt::get(left->type.prim, left->type.prim->getIntegerBitWidth());
 			inv = cog.builder.CreateSub(width, right->value);
 			lsb = cog.builder.CreateLShr(left->value, right->value);
 			msb = cog.builder.CreateShl(left->value, inv);
 			left->value = cog.builder.CreateOr(msb, lsb);
 			break;
 		case ROL:
-			width = ConstantInt::get(cog.context, APInt(32, (int)left->value->getType()->getIntegerBitWidth(), true));
+			binaryTypecheck(left, right);
+			width = ConstantInt::get(left->type.prim, left->type.prim->getIntegerBitWidth());
 			inv = cog.builder.CreateSub(width, right->value);
 			lsb = cog.builder.CreateLShr(left->value, inv);
 			msb = cog.builder.CreateShl(left->value, right->value);
@@ -613,7 +653,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 				left->value = cog.builder.CreateSRem(left->value, right->value);
 			break;
 		default:
-			printf("error: %d:%d unrecognized operator\n", line, column); 
+			error() << "unrecognized binary operator '" << (char)op << "'." << endl;
 			delete left;
 			delete right;
 			return NULL;
@@ -623,7 +663,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 		delete right;
 		return left;
 	} else {
-		printf("error: %d:%d previous failure\n", line, column); 
+		error() << "here" << endl;
 		if (left)
 			delete left;
 		if (right)
@@ -636,15 +676,14 @@ void declareSymbol(Info *type, char *name)
 {
 	if (type && name) {
 		if (cog.getScope()->findSymbol(name) != NULL) {
-			printf("error: %d:%d variable '%s' already defined\n", line, column, name); 
-			// already defined
+			error() << "variable '" << name << "' already defined." << endl;
 		}
 
 		cog.getScope()->createSymbol(name, type->type);
 		delete type;
 		delete name;
 	} else {
-		printf("error: %d:%d previous failure\n", line, column); 
+		error() << "here" << endl;
 		if (type)
 			delete type;
 		if (name)
@@ -660,7 +699,7 @@ void assignSymbol(Info *symbol, Info *value)
 		symbol->symbol->setValue(value->value);
 		value->value->setName(symbol->symbol->name + "_");
 	} else {
-		printf("error: %d:%d previous failure\n", line, column); 
+		error() << "here" << endl;
 		if (symbol)
 			delete symbol;
 		if (value)
@@ -731,7 +770,7 @@ void returnValue(Info *value)
 
 		cog.builder.CreateRet(value->value);
 	} else {
-		printf("error: %d:%d previous failure\n", line, column); 
+		error() << "here" << endl;
 	}
 }
 

@@ -26,6 +26,7 @@ struct Typename
 
 	bool isBool;
 	bool isUnsigned;
+	int bitwidth;
 	int fpExp;
 
 	std::string getName();
