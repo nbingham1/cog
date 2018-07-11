@@ -49,6 +49,7 @@ structure_declaration
 
 function_declaration
 	: function_declaration '{' statement_list '}' { Cog::functionDefinition(); }
+	| function_declaration asm_block { Cog::asmFunctionDefinition(); }
 	| function_declaration '{' '}' { Cog::functionDefinition(); }
 	;
 
@@ -140,41 +141,37 @@ assignment
 	;
 
 asm_block
-	: ASM '{' asm_statement_list '}'
+	: ASM '{' asm_statement_list '}' { Cog::asmBlock($<info>3); }
 	;
 
 asm_statement_list
-	: asm_statement_list asm_statement
-	| asm_statement_list ';' asm_statement
-	| asm_statement
+	: asm_statement_list asm_statement { $<info>$ = Cog::infoList($<info>1, $<info>2); }
+	| asm_statement_list ';' asm_statement { $<info>$ = Cog::infoList($<info>1, $<info>3); }
+	| asm_statement { $<info>$ = $<info>1; }
 	;
 
 asm_statement
-	: ASM_LABEL asm_instruction { printf("%s\n", $<syntax>1); }
-	| asm_instruction
+	: ASM_LABEL asm_instruction { $<info>$ = $<info>2; }
+	| asm_instruction { $<info>$ = $<info>1; }
 	;
 
 asm_instruction
-	: ASM_DIRECTIVE STRING_CONSTANT
-	| ASM_DIRECTIVE IDENTIFIER
-	| ASM_DIRECTIVE DEC_CONSTANT
-	| ASM_DIRECTIVE HEX_CONSTANT
-	| IDENTIFIER asm_argument_list	{ printf("%s\n", $<syntax>1); }
-	| IDENTIFIER	{ printf("%s\n", $<syntax>1); }
+	: IDENTIFIER asm_argument_list	{ $<info>$ = Cog::asmInstruction($<syntax>1, $<info>2); }
+	| IDENTIFIER	{ $<info>$ = Cog::asmInstruction($<syntax>1, NULL); }
 	;
 
 asm_argument_list
-	: asm_argument_list ',' asm_argument
-	| asm_argument
+	: asm_argument_list ',' asm_argument { $<info>$ = Cog::infoList($<info>1, $<info>3); }
+	| asm_argument { $<info>$ = $<info>1; }
 	;
 
 asm_argument
-	: ASM_REGISTER	{ printf("%s\n", $<syntax>1); }
-	| ASM_CONSTANT	{ printf("%s\n", $<syntax>1); }
-	| IDENTIFIER	{ printf("%s\n", $<syntax>1); }
-	| '-' DEC_CONSTANT '(' asm_argument_list ')'	{ printf("%s\n", $<syntax>2); }
-	| DEC_CONSTANT '(' asm_argument_list ')'	{ printf("%s\n", $<syntax>1); }
-	| '(' asm_argument_list ')'
+	: ASM_REGISTER	{ $<info>$ = Cog::asmRegister($<syntax>1); }
+	| ASM_CONSTANT	{ $<info>$ = Cog::asmConstant($<syntax>1); }
+	| IDENTIFIER	{ $<info>$ = Cog::asmIdentifier($<syntax>1); }
+	| IDENTIFIER '(' type_list ')' { $<info>$ = Cog::asmFunction($<syntax>1, $<info>3); }
+	| ASM_CONSTANT '(' asm_argument_list ')'	{ $<info>$ = Cog::asmAddress($<syntax>1, $<info>3); }
+	| '(' asm_argument_list ')' { $<info>$ = Cog::asmAddress(NULL, $<info>2); }
 	;
 
 call

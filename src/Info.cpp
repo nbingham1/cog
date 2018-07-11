@@ -248,4 +248,16 @@ Info::~Info()
 	next = NULL;
 }
 
+AsmArg::AsmArg(Symbol *sym)
+{
+	symbol = sym;
+	hasRead = false;
+	hasWrite = false;
+	hasMem = false;
+}
+
+AsmArg::~AsmArg()
+{
+}
+
 }

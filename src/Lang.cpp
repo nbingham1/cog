@@ -927,11 +927,191 @@ void whileStatement()
 
 Info *infoList(Info *lst, Info *elem)
 {
-	Info *curr = lst;
-	while (curr->next != NULL)
-		curr = curr->next;
-	curr->next = elem;
-	return lst;
+	if (lst) {
+		Info *curr = lst;
+		while (curr->next != NULL)
+			curr = curr->next;
+
+		curr->next = elem;
+		return lst;
+	} else
+		return elem;
+}
+
+Info *asmRegister(char *txt)
+{
+	Info *result = new Info();
+	result->assembly = txt;
+	delete txt;
+	return result;
+}
+
+Info *asmConstant(char *txt)
+{
+	Info *result = new Info();
+	if (txt[0] == '$')
+		result->assembly = std::string("$") + txt;
+	else
+		result->assembly = txt;
+	delete txt;
+	return result;
+}
+
+Info *asmIdentifier(char *txt)
+{
+	Symbol *symbol = NULL;
+	int id = -1;
+	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
+		if (strncmp(txt, cog.asmArgs[i].symbol->name.c_str(), cog.asmArgs[i].symbol->name.size()) == 0) {
+			symbol = cog.asmArgs[i].symbol;
+			id = i;
+		}
+	}
+	
+	if (symbol == NULL) {
+		symbol = cog.getScope()->findSymbol(txt);
+		id = (int)cog.asmArgs.size();
+
+		if (symbol)
+			cog.asmArgs.push_back(AsmArg(symbol));
+	}
+
+	if (symbol) {
+		char buffer[8];
+		sprintf(buffer, "$%d", id);
+		Info *result = new Info();
+		result->assembly = buffer; 
+		result->symbol = symbol;
+		result->value = symbol->getValue();
+		result->type = result->symbol->type;
+		delete txt;
+		return result;
+	}
+
+	error() << "undefined variable '" << txt << "'." << endl;
+	delete txt;
+	return NULL;
+}
+
+Info *asmFunction(char *txt, Info *args)
+{
+	Info *result = new Info();
+	result->assembly = txt;
+	result->next = args;
+	delete txt;
+	return result;
+}
+
+void asmFunctionDefinition()
+{
+	returnVoid();
+	cog.scopes.pop_back();
+	cog.scopes.push_back(Scope());
+	cog.asmArgs.clear();
+}
+
+Info *asmAddress(char *cnst, Info *args)
+{
+	Info *result = new Info();
+	if (cnst) {
+		result->assembly = cnst;
+		delete cnst;
+	}
+
+	result->assembly += "(";
+	for (Info *cur = args; cur != NULL; cur = cur->next) {
+		if (cur != args)
+			result->assembly += ",";
+		result->assembly += cur->assembly;
+	}
+	result->assembly += ")";
+	delete args;
+	return result;
+}
+
+Info *asmInstruction(char *instr, Info *args)
+{
+	Info *result = new Info();
+	result->assembly = instr;
+
+	if (args) {
+		result->assembly += " ";
+		for (Info *cur = args; cur != NULL; cur = cur->next) {
+			if (cur != args)
+				result->assembly += ",";
+			result->assembly += cur->assembly;
+
+			if (cur->symbol) {
+				for (int i = 0; i < (int)cog.asmArgs.size(); i++)
+					if (cur->symbol == cog.asmArgs[i].symbol) {
+						cog.asmArgs[i].hasWrite = cog.asmArgs[i].hasWrite || !cur->next;
+						cog.asmArgs[i].hasRead = true;
+					}
+			}
+		}
+		delete args;
+	}
+
+	delete instr;
+	return result;
+}
+
+Info *asmStatement(char *label, Info *instr)
+{
+	if (label) {
+		instr->assembly = std::string(label) + " " + instr->assembly;
+		delete label;
+	}
+	return instr;
+}
+
+void asmBlock(Info *instrs)
+{
+	std::string assembly;
+	for (Info *cur = instrs; cur; cur = cur->next) {
+		if (cur != instrs)
+			assembly += ";\n";
+		assembly += cur->assembly;
+	}
+
+	bool isWriting = true;
+
+	Type *retType = Type::getVoidTy(cog.context);
+	std::string constraints;
+	std::vector<Type*> argTypes;
+	std::vector<Value*> argValues;
+	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
+		if (i != 0)
+			constraints += ",";
+
+		/*if (i != 0 && cog.asmArgs[i].hasWrite == isWriting)
+			constraints += ",";
+		else if (cog.asmArgs[i].hasWrite != isWriting)
+			constraints += ":";*/
+
+		if (cog.asmArgs[i].hasWrite)
+			constraints += "=";
+
+		if (cog.asmArgs[i].hasMem)
+			constraints += "m";
+		else
+			constraints += "r";
+		
+		if (!cog.asmArgs[i].hasWrite) {
+			argValues.push_back(cog.asmArgs[i].symbol->getValue());
+			argTypes.push_back(argValues.back()->getType());
+		} else
+			retType = cog.asmArgs[i].symbol->type.prim;
+	}
+
+	FunctionType *returnType = FunctionType::get(retType, argTypes, false);	
+	InlineAsm *asmIns = InlineAsm::get(returnType, assembly, constraints, false);
+	Value *ret = cog.builder.CreateCall(asmIns, argValues);
+
+	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
+		if (cog.asmArgs[i].hasWrite)
+			cog.asmArgs[i].symbol->setValue(ret);
+	}
 }
 
 }

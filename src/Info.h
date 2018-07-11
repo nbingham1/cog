@@ -115,10 +115,22 @@ struct Info
 	Info();
 	~Info();
 
+	std::string assembly;
 	Typename type;
 	llvm::Value *value;
 	Symbol *symbol;
 	Info *next;
+};
+
+struct AsmArg
+{
+	AsmArg(Symbol *sym = NULL);
+	~AsmArg();
+
+	Symbol *symbol;
+	bool hasRead;
+	bool hasWrite;
+	bool hasMem;
 };
 
 }

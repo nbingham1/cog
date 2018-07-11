@@ -41,5 +41,16 @@ void whileStatement();
 
 Info *infoList(Info *lst, Info *elem);
 
+Info *asmRegister(char *txt);
+Info *asmConstant(char *txt);
+Info *asmIdentifier(char *txt);
+Info *asmFunction(char *txt, Info *args);
+void asmFunctionDefinition();
+Info *asmAddress(char *cnst, Info *args);
+Info *asmInstruction(char *instr, Info *args);
+Info *asmStatement(char *label, Info *instr);
+void asmBlock(Info *instrs);
+
+
 }
 
