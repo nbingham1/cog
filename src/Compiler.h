@@ -50,7 +50,6 @@ struct Compiler
 	Module *module;
 	std::string source;
 
-	std::vector<AsmArg> asmArgs;
 	std::list<BaseType> types;
 	std::vector<Scope> scopes;
 

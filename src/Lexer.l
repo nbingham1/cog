@@ -79,23 +79,23 @@ float{d}*							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); ret
 u?fixed{d}*{e}?				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return FIXED_PRIMITIVE; }
 
 	/* inline assembly */
-\%{l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_REGISTER; }
+\%{l}({l}|{d})*				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_REGISTER; }
 \$-?(0[xX]{x}+|{d}+)	{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_CONSTANT; }
-\.{l}({l}|{d})*			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_DIRECTIVE; }
-{l}({l}|{d})*:			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_LABEL; }
+\.{l}({l}|{d})*				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_DIRECTIVE; }
+{l}({l}|{d})*:				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return ASM_LABEL; }
 
 	/* constants */
-\"(\\.|[^\\"])*\"		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return STRING_CONSTANT; }
-"true"							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
-"false"							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
-{l}({l}|{d})*				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
-0[xX]{x}+						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return HEX_CONSTANT; }
-{d}+								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
-0[bB][01]+					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BIN_CONSTANT; }
+\"(\\.|[^\\"])*\"			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return STRING_CONSTANT; }
+"true"								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
+"false"								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_CONSTANT; }
+{l}({l}|{d})*					{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return IDENTIFIER; }
+0[xX]{x}+							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return HEX_CONSTANT; }
+-?{d}+								{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
+0[bB][01]+						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BIN_CONSTANT; }
 
-{d}+{e}						{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
-{d}*"."{d}+{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
-{d}+"."{d}*{e}?		{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
+-?{d}+{e}							{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
+-?{d}*"."{d}+{e}?			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
+-?{d}+"."{d}*{e}?			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
 
 	/* misc */
 [\n]									{ ++line; column = 0; str = yytext+1; }

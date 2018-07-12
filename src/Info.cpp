@@ -236,6 +236,7 @@ Symbol *Scope::createSymbol(std::string name, Typename type)
 
 Info::Info()
 {
+	args = NULL;
 	value = NULL;
 	symbol = NULL;
 	next = NULL;
@@ -246,18 +247,10 @@ Info::~Info()
 	if (next != NULL)
 		delete next;
 	next = NULL;
-}
 
-AsmArg::AsmArg(Symbol *sym)
-{
-	symbol = sym;
-	hasRead = false;
-	hasWrite = false;
-	hasMem = false;
-}
-
-AsmArg::~AsmArg()
-{
+	if (args != NULL)
+		delete args;
+	args = NULL;
 }
 
 }

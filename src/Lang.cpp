@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <iostream>
+#include <sstream>
 #include <llvm/ADT/Twine.h>
 
 extern Cog::Compiler cog;
@@ -113,11 +114,11 @@ Info *getTypename(int token, char *txt)
 	return NULL;
 }
 
-Info *getConstant(uint64_t cnst)
+Info *getConstant(int64_t cnst)
 {
 	Info *result = new Info();
 	
-	APInt value(64, cnst, false);
+	APInt value(64, (uint64_t)cnst, cnst < 0);
 	int valueShift = value.countTrailingZeros();
 	value = value.lshr(valueShift);
 	value = value.trunc(value.ceilLogBase2());
@@ -126,7 +127,7 @@ Info *getConstant(uint64_t cnst)
 	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
 	result->type.prim = result->value->getType();
 	result->type.fpExp = exponent;
-	result->type.isUnsigned = true;
+	result->type.isUnsigned = cnst >= 0;
 	
 	return result;
 }
@@ -137,14 +138,20 @@ Info *getConstant(int token, char *txt)
 	
 	char *curr = txt;
 	bool isFractional = false;
+	bool isNegative = false;
 	
 	std::string valueStr = "";
 	unsigned int radix = 10;
 	int exponent = 0;
+
+	if (*curr == '-') {
+		isNegative = true;
+		++curr;
+	}
 	
 	switch (token) {
 	case BOOL_CONSTANT:
-		if (txt[0] == 't' || txt[0] == 'T' || txt[0] == 'y' || txt[0] == 'Y' || txt[0] == '1')
+		if (*curr == 't' || *curr == 'T' || *curr == 'y' || *curr == 'Y' || *curr == '1')
 			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 1);
 		else
 			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 0);
@@ -219,12 +226,14 @@ Info *getConstant(int token, char *txt)
 	valueShift = value.countTrailingZeros();
 	value = value.lshr(valueShift);
 	value = value.trunc(value.getBitWidth() - valueShift);
+	if (isNegative)
+		value = -value;
 	exponent += valueShift;
 
 	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
 	result->type.prim = result->value->getType();
 	result->type.fpExp = exponent;
-	result->type.isUnsigned = true;
+	result->type.isUnsigned = !isNegative;
 
 	printf("%s: %s*2^%d width: %d\n", result->type.getName().c_str(), value.toString(10, false).c_str(), result->type.fpExp, value.getBitWidth());
 	
@@ -941,7 +950,7 @@ Info *infoList(Info *lst, Info *elem)
 Info *asmRegister(char *txt)
 {
 	Info *result = new Info();
-	result->assembly = txt;
+	result->text = txt;
 	delete txt;
 	return result;
 }
@@ -950,53 +959,17 @@ Info *asmConstant(char *txt)
 {
 	Info *result = new Info();
 	if (txt[0] == '$')
-		result->assembly = std::string("$") + txt;
+		result->text = std::string("$") + txt;
 	else
-		result->assembly = txt;
+		result->text = txt;
 	delete txt;
 	return result;
-}
-
-Info *asmIdentifier(char *txt)
-{
-	Symbol *symbol = NULL;
-	int id = -1;
-	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
-		if (strncmp(txt, cog.asmArgs[i].symbol->name.c_str(), cog.asmArgs[i].symbol->name.size()) == 0) {
-			symbol = cog.asmArgs[i].symbol;
-			id = i;
-		}
-	}
-	
-	if (symbol == NULL) {
-		symbol = cog.getScope()->findSymbol(txt);
-		id = (int)cog.asmArgs.size();
-
-		if (symbol)
-			cog.asmArgs.push_back(AsmArg(symbol));
-	}
-
-	if (symbol) {
-		char buffer[8];
-		sprintf(buffer, "$%d", id);
-		Info *result = new Info();
-		result->assembly = buffer; 
-		result->symbol = symbol;
-		result->value = symbol->getValue();
-		result->type = result->symbol->type;
-		delete txt;
-		return result;
-	}
-
-	error() << "undefined variable '" << txt << "'." << endl;
-	delete txt;
-	return NULL;
 }
 
 Info *asmFunction(char *txt, Info *args)
 {
 	Info *result = new Info();
-	result->assembly = txt;
+	result->text = txt;
 	result->next = args;
 	delete txt;
 	return result;
@@ -1007,111 +980,219 @@ void asmFunctionDefinition()
 	returnVoid();
 	cog.scopes.pop_back();
 	cog.scopes.push_back(Scope());
-	cog.asmArgs.clear();
 }
 
-Info *asmAddress(char *cnst, Info *args)
+Info *asmMemoryArg(char *seg, char *cnst, Info *args)
 {
 	Info *result = new Info();
+	if (seg) {
+		result->text += seg;
+		delete seg;
+	}
+
 	if (cnst) {
-		result->assembly = cnst;
+		if (result->text.size() > 0)
+			result->text += ":";
+		result->text += cnst;
 		delete cnst;
 	}
 
-	result->assembly += "(";
-	for (Info *cur = args; cur != NULL; cur = cur->next) {
-		if (cur != args)
-			result->assembly += ",";
-		result->assembly += cur->assembly;
+	result->args = args;
+	return result;
+}
+
+Info *asmAddress(Info *base, Info *offset, char *scale)
+{
+	Info *result = NULL;
+	if (scale) {
+		result = new Info();
+		result->text = scale;
+		delete scale;
 	}
-	result->assembly += ")";
-	delete args;
+
+	if (offset) {
+		offset->next = result;
+		result = offset;
+	} else if (result) {
+		offset = new Info();
+		offset->next = result;
+		result = offset;
+	}
+
+	if (base) {
+		base->next = result;
+		result = base;
+	} else if (result) {
+		base = new Info();
+		base->next = result;
+		result = base;
+	}
+
 	return result;
 }
 
 Info *asmInstruction(char *instr, Info *args)
 {
 	Info *result = new Info();
-	result->assembly = instr;
-
-	if (args) {
-		result->assembly += " ";
-		for (Info *cur = args; cur != NULL; cur = cur->next) {
-			if (cur != args)
-				result->assembly += ",";
-			result->assembly += cur->assembly;
-
-			if (cur->symbol) {
-				for (int i = 0; i < (int)cog.asmArgs.size(); i++)
-					if (cur->symbol == cog.asmArgs[i].symbol) {
-						cog.asmArgs[i].hasWrite = cog.asmArgs[i].hasWrite || !cur->next;
-						cog.asmArgs[i].hasRead = true;
-					}
-			}
-		}
-		delete args;
-	}
-
+	result->text = instr;
+	result->args = args;
 	delete instr;
 	return result;
 }
 
 Info *asmStatement(char *label, Info *instr)
 {
+	Info *result = instr;
 	if (label) {
-		instr->assembly = std::string(label) + " " + instr->assembly;
+		result = new Info();
+		result->args = instr;
+		result->text = label;
 		delete label;
 	}
-	return instr;
+	return result;
 }
 
-void asmBlock(Info *instrs)
+void asmBlock(Info *stmts)
 {
-	std::string assembly;
-	for (Info *cur = instrs; cur; cur = cur->next) {
-		if (cur != instrs)
-			assembly += ";\n";
-		assembly += cur->assembly;
+	std::vector<Symbol*> outs;
+	std::vector<Type*> outTypes;
+	std::vector<Type*> inTypes;
+	std::vector<Value*> inValues;
+	std::string outCnsts;
+	std::string inCnsts;
+
+	// figure out constraints and register mapping
+	for (Info *stmt = stmts; stmt; stmt = stmt->next) {
+		// strip labels
+		Info *instr = NULL;
+		if (stmt->text.size() > 0 && stmt->text.back() == ':')
+			instr = stmt->args;
+		else
+			instr = stmt;
+
+		for (Info *arg = instr->args; arg; arg = arg->next) {
+			// handle memory arguments
+			for (Info *addr = arg->args; addr; addr = addr->next) {
+				if (addr->symbol) {
+					if (arg->next) {
+						if (inCnsts.size() > 0)
+							inCnsts += ",";
+						inCnsts += "r";
+						inTypes.push_back(addr->type.prim);
+						inValues.push_back(addr->value);
+					} else {
+						if (outCnsts.size() > 0)
+							outCnsts += ",";
+						outCnsts += "=r";
+						outs.push_back(addr->symbol);
+						outTypes.push_back(addr->type.prim);
+					}
+				}
+			}
+
+			if (arg->symbol) {
+				if (arg->next) {
+					if (inCnsts.size() > 0)
+						inCnsts += ",";
+					inCnsts += "r";
+					inTypes.push_back(arg->type.prim);
+					inValues.push_back(arg->value);
+				} else {
+					if (outCnsts.size() > 0)
+						outCnsts += ",";
+					outCnsts += "=r";
+					outs.push_back(arg->symbol);
+					outTypes.push_back(arg->type.prim);
+				}
+			}
+		}
 	}
 
-	bool isWriting = true;
+	// build the assembly string
+	std::stringstream assembly;
+	for (Info *stmt = stmts; stmt; stmt = stmt->next) {
+		if (stmt != stmts)
+			assembly << ";\n";
+
+		// strip labels
+		Info *instr = NULL;
+		if (stmt->text.size() > 0 && stmt->text.back() == ':') {
+			assembly << stmt->text << " ";
+			instr = stmt->args;
+		} else
+			instr = stmt;
+
+		assembly << instr->text;
+		for (Info *arg = instr->args; arg; arg = arg->next) {
+			if (arg != instr->args)
+				assembly << ", ";
+
+			// handle memory arguments
+			if (arg->args) {
+				assembly << arg->text << "(";
+				for (Info *addr = arg->args; addr; addr = addr->next) {
+					if (addr != arg->args)
+						assembly << ",";
+
+					if (addr->symbol) {
+						bool found = false;
+						for (int i = 0; !found && i < (int)outs.size(); i++)
+							if (addr->symbol == outs[i]) {
+								assembly << "$" << i;
+								found = true;
+							}
+						for (int i = 0; !found && i < (int)inValues.size(); i++)
+							if (addr->value == inValues[i]) {
+								assembly << "$" << ((int)outs.size() + i);
+								found = true;
+							}
+
+						if (!found)
+							error() << "This shouldn't happen..." << endl;
+					} else {
+						assembly << addr->text;
+					}
+				}
+				assembly << ")";
+			} else if (arg->symbol) {
+				bool found = false;
+				for (int i = 0; !found && i < (int)outs.size(); i++)
+					if (arg->symbol == outs[i]) {
+						assembly << "$" << i;
+						found = true;
+					}
+				for (int i = 0; !found && i < (int)inValues.size(); i++)
+					if (arg->value == inValues[i]) {
+						assembly << "$" << ((int)outs.size() + i);
+						found = true;
+					}
+
+				if (!found)
+					error() << "This shouldn't happen..." << endl;	
+			} else {
+				assembly << arg->text;
+			}
+		}
+	}
+
+	std::string constraints;
+	constraints += outCnsts;
+	if (inCnsts.size() > 0 && outCnsts.size() > 0)
+		constraints += ",";
+	constraints += inCnsts;
 
 	Type *retType = Type::getVoidTy(cog.context);
-	std::string constraints;
-	std::vector<Type*> argTypes;
-	std::vector<Value*> argValues;
-	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
-		if (i != 0)
-			constraints += ",";
+	if (outTypes.size() > 0)
+		retType = outTypes[0];
 
-		/*if (i != 0 && cog.asmArgs[i].hasWrite == isWriting)
-			constraints += ",";
-		else if (cog.asmArgs[i].hasWrite != isWriting)
-			constraints += ":";*/
+	FunctionType *returnType = FunctionType::get(retType, inTypes, false);	
+	InlineAsm *asmIns = InlineAsm::get(returnType, assembly.str(), constraints, false);
+	Value *ret = cog.builder.CreateCall(asmIns, inValues);
 
-		if (cog.asmArgs[i].hasWrite)
-			constraints += "=";
+	for (int i = 0; i < (int)outs.size(); i++)
+		outs[i]->setValue(ret);
 
-		if (cog.asmArgs[i].hasMem)
-			constraints += "m";
-		else
-			constraints += "r";
-		
-		if (!cog.asmArgs[i].hasWrite) {
-			argValues.push_back(cog.asmArgs[i].symbol->getValue());
-			argTypes.push_back(argValues.back()->getType());
-		} else
-			retType = cog.asmArgs[i].symbol->type.prim;
-	}
-
-	FunctionType *returnType = FunctionType::get(retType, argTypes, false);	
-	InlineAsm *asmIns = InlineAsm::get(returnType, assembly, constraints, false);
-	Value *ret = cog.builder.CreateCall(asmIns, argValues);
-
-	for (int i = 0; i < (int)cog.asmArgs.size(); i++) {
-		if (cog.asmArgs[i].hasWrite)
-			cog.asmArgs[i].symbol->setValue(ret);
-	}
+	delete stmts;
 }
 
 }

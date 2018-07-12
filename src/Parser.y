@@ -151,7 +151,7 @@ asm_statement_list
 	;
 
 asm_statement
-	: ASM_LABEL asm_instruction { $<info>$ = $<info>2; }
+	: ASM_LABEL asm_instruction { $<info>$ = asmStatement($<syntax>1, $<info>2); }
 	| asm_instruction { $<info>$ = $<info>1; }
 	;
 
@@ -162,16 +162,31 @@ asm_instruction
 
 asm_argument_list
 	: asm_argument_list ',' asm_argument { $<info>$ = Cog::infoList($<info>1, $<info>3); }
+	| asm_argument_list ',' asm_memory_arg { $<info>$ = Cog::infoList($<info>1, $<info>3); }
 	| asm_argument { $<info>$ = $<info>1; }
+	| asm_memory_arg { $<info>$ = $<info>1; }
+	;
+
+asm_memory_arg
+	: ASM_REGISTER ':' DEC_CONSTANT asm_address	{ $<info>$ = Cog::asmMemoryArg($<syntax>1, $<syntax>3, $<info>4); }
+	| DEC_CONSTANT asm_address									{ $<info>$ = Cog::asmMemoryArg(NULL, $<syntax>1, $<info>2); }
+	;
+
+asm_address
+	: '(' asm_argument ',' asm_argument ',' DEC_CONSTANT ')'	{ $<info>$ = Cog::asmAddress($<info>2, $<info>4, $<syntax>6); }
+	| '(' asm_argument ',' asm_argument ')'										{ $<info>$ = Cog::asmAddress($<info>2, $<info>4, NULL); }
+	| '(' asm_argument ')'																		{ $<info>$ = Cog::asmAddress($<info>2, NULL, NULL); }
+	| '(' ')'																									{ $<info>$ = Cog::asmAddress(NULL, NULL, NULL); }
+	| '(' asm_argument ',' ',' DEC_CONSTANT ')'								{ $<info>$ = Cog::asmAddress($<info>2, NULL, $<syntax>5); }
+	| '(' ',' asm_argument ',' DEC_CONSTANT ')'								{ $<info>$ = Cog::asmAddress(NULL, $<info>3, $<syntax>5); }
+	| '(' ',' DEC_CONSTANT ')'																{ $<info>$ = Cog::asmAddress(NULL, $<info>3, NULL); }
 	;
 
 asm_argument
 	: ASM_REGISTER	{ $<info>$ = Cog::asmRegister($<syntax>1); }
 	| ASM_CONSTANT	{ $<info>$ = Cog::asmConstant($<syntax>1); }
-	| IDENTIFIER	{ $<info>$ = Cog::asmIdentifier($<syntax>1); }
+	| IDENTIFIER	{ $<info>$ = Cog::getIdentifier($<syntax>1); }
 	| IDENTIFIER '(' type_list ')' { $<info>$ = Cog::asmFunction($<syntax>1, $<info>3); }
-	| ASM_CONSTANT '(' asm_argument_list ')'	{ $<info>$ = Cog::asmAddress($<syntax>1, $<info>3); }
-	| '(' asm_argument_list ')' { $<info>$ = Cog::asmAddress(NULL, $<info>2); }
 	;
 
 call
