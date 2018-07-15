@@ -112,10 +112,10 @@ The following table lists the precedence and associativity of all supported oper
 <tr><th>2</th><td>a::b</td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
 <tr>
 <th>3</th>
-<td>a()<br>a[]<br>a&#42; a&amp;<br>a{b}<br>a.b</td>
-<td>function call<br>subscript<br>pointer dereference, address-of<br>typecast<br>member access</td>
+<td>a()<br>a[]<br>a&#42;<br>a&amp;<br>a{b}<br>a.b</td>
+<td>function call<br>subscript<br>pointer dereference<br>address-of<br>typecast<br>member access</td>
 <td>left to right</td>
-<td>yes<br>no<br>no<br>no<br>no</td>
+<td>yes<br>no<br>no<br>no<br>no<br>no</td>
 </tr>
 <tr>
 <th>4</th>
