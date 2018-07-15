@@ -102,6 +102,26 @@ Both integer and decimal constants are encoded as fixed point numbers with arbit
 0b1001
 ```
 
+Variable assignment returns void and must be separate statements.
+
+<table>
+<tr><th>Operator</th><th>Description</th><th>Implemented</th></tr>
+<tr><td>a=b;</td><td>direct assignment</td><td>yes</td></tr>
+<tr><td>a+=b;</td><td>inplace add</td><td>no</td></tr>
+<tr><td>a-=b;</td><td>inplace subtract</td><td>no</td></tr>
+<tr><td>a&#42;=b;</td><td>inplace multiply</td><td>no</td></tr>
+<tr><td>a/=b;</td><td>inplace divide</td><td>no</td></tr>
+<tr><td>a%=b;</td><td>inplace remainder</td><td>no</td></tr>
+<tr><td>a&lt;&lt;=b;</td><td>inplace left shift</td><td>no</td></tr>
+<tr><td>a&gt;&gt;=b;</td><td>inplace logical right shift</td><td>no</td></tr>
+<tr><td>a&gt;&gt;&gt;=b;</td><td>inplace arithmetic right shift</td><td>no</td></tr>
+<tr><td>a&lt;&lt;&gt;=b;</td><td>inplace rotate left</td><td>no</td></tr>
+<tr><td>a&gt;&gt;&lt;=b;</td><td>inplace rotate right</td><td>no</td></tr>
+<tr><td>a&=b;</td><td>inplace bitwise AND</td><td>no</td></tr>
+<tr><td>a^=b;</td><td>inplace bitwise XOR</td><td>no</td></tr>
+<tr><td>a|=b;</td><td>inplace bitwise OR</td><td>no</td></tr>
+</table>
+
 #### Expressions
 
 The following table lists the precedence and associativity of all supported operators in descending precedence.
@@ -126,7 +146,7 @@ The following table lists the precedence and associativity of all supported oper
 </tr>
 <tr>
 <th>5</th>
-<td>a&#42;b<br>a/b<br>a%b</td>
+<td><code>a&#42;b</code><br>a/b<br>a%b</td>
 <td>multiplication<br>division<br>remainder</td>
 <td>left to right</td>
 <td>yes<br>yes<br>yes</td>
@@ -141,7 +161,7 @@ The following table lists the precedence and associativity of all supported oper
 <tr>
 <th>7</th>
 <td>a&lt;&lt;b<br>a&gt;&gt;b<br>a&gt;&gt;&gt;b<br>a&lt;&lt;&gt;b<br>a&gt;&gt;&lt;b</td>
-<td>left shift<br>arithmetic right shift<br>logical right shift<br>rotate left<br>rotate right</td>
+<td>left shift<br>logical right shift<br>arithmetic right shift<br>rotate left<br>rotate right</td>
 <td>left to right</td>
 <td>yes<br>yes<br>yes<br>yes<br>yes</td>
 </tr>
@@ -157,7 +177,7 @@ The following table lists the precedence and associativity of all supported oper
 </tr>
 <tr><th>12</th><td>a and b</td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
 <tr><th>13</th><td>a xor b</td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
-<tr><th>14</th><td>a or b</td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>14</th><td><code>a or b</code></td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
 </table>
 
 #### Implicit Casting Rules
