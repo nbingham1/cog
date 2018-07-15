@@ -106,20 +106,20 @@ Variable assignment returns void and must be separate statements.
 
 <table>
 <tr><th>Operator</th><th>Description</th><th>Implemented</th></tr>
-<tr><td>a=b;</td><td>direct assignment</td><td>yes</td></tr>
-<tr><td>a+=b;</td><td>inplace add</td><td>no</td></tr>
-<tr><td>a-=b;</td><td>inplace subtract</td><td>no</td></tr>
-<tr><td>a&#42;=b;</td><td>inplace multiply</td><td>no</td></tr>
-<tr><td>a/=b;</td><td>inplace divide</td><td>no</td></tr>
-<tr><td>a%=b;</td><td>inplace remainder</td><td>no</td></tr>
-<tr><td>a&lt;&lt;=b;</td><td>inplace left shift</td><td>no</td></tr>
-<tr><td>a&gt;&gt;=b;</td><td>inplace logical right shift</td><td>no</td></tr>
-<tr><td>a&gt;&gt;&gt;=b;</td><td>inplace arithmetic right shift</td><td>no</td></tr>
-<tr><td>a&lt;&lt;&gt;=b;</td><td>inplace rotate left</td><td>no</td></tr>
-<tr><td>a&gt;&gt;&lt;=b;</td><td>inplace rotate right</td><td>no</td></tr>
-<tr><td>a&=b;</td><td>inplace bitwise AND</td><td>no</td></tr>
-<tr><td>a^=b;</td><td>inplace bitwise XOR</td><td>no</td></tr>
-<tr><td>a|=b;</td><td>inplace bitwise OR</td><td>no</td></tr>
+<tr><td><code>a=b;</code></td><td>direct assignment</td><td>yes</td></tr>
+<tr><td><code>a+=b;</code></td><td>inplace add</td><td>no</td></tr>
+<tr><td><code>a-=b;</code></td><td>inplace subtract</td><td>no</td></tr>
+<tr><td><code>a&#42;=b;</code></td><td>inplace multiply</td><td>no</td></tr>
+<tr><td><code>a/=b;</code></td><td>inplace divide</td><td>no</td></tr>
+<tr><td><code>a%=b;</code></td><td>inplace remainder</td><td>no</td></tr>
+<tr><td><code>a&lt;&lt;=b;</code></td><td>inplace left shift</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;=b;</code></td><td>inplace logical right shift</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;&gt;=b;</code></td><td>inplace arithmetic right shift</td><td>no</td></tr>
+<tr><td><code>a&lt;&lt;&gt;=b;</code></td><td>inplace rotate left</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;&lt;=b;</code></td><td>inplace rotate right</td><td>no</td></tr>
+<tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>no</td></tr>
+<tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>no</td></tr>
+<tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>no</td></tr>
 </table>
 
 #### Expressions
@@ -128,55 +128,55 @@ The following table lists the precedence and associativity of all supported oper
 
 <table>
 <tr><th>Precedence</th><th>Operator</th><th>Description</th><th>Associativity</th><th>Implemented</th></tr>
-<tr><th>1</th><td>(a)</td><td>parenthesis</td><td></td><td>yes</td></tr>
-<tr><th>2</th><td>a::b</td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
+<tr><th>1</th><td><code>(a)</code></td><td>parenthesis</td><td></td><td>yes</td></tr>
+<tr><th>2</th><td><code>a::b</code></td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
 <tr>
 <th>3</th>
-<td>a()<br>a[]<br>a&#42;<br>a&amp;<br>a{b}<br>a.b</td>
+<td><code>a()</code><br><code>a[]</code><br><code>a&#42;</code><br><code>a&amp;</code><br><code>a{b}</code><br><code>a.b</code></td>
 <td>function call<br>subscript<br>pointer dereference<br>address-of<br>typecast<br>member access</td>
 <td>left to right</td>
 <td>yes<br>no<br>no<br>no<br>no<br>no</td>
 </tr>
 <tr>
 <th>4</th>
-<td>~a<br>not a<br>-a<br>new a<br>delete a</td>
+<td><code>~a</code><br><code>not a</code><br><code>-a</code><br><code>new a</code><br><code>delete a</code></td>
 <td>bitwise not<br>boolean not<br>negative<br>allocate memory<br>deallocate memory</td>
 <td>right to left</td>
 <td>yes<br>yes<br>yes<br>no<br>no</td>
 </tr>
 <tr>
 <th>5</th>
-<td><code>a&#42;b</code><br>a/b<br>a%b</td>
+<td><code>a&#42;b</code><br><code>a/b</code><br><code>a%b</code></td>
 <td>multiplication<br>division<br>remainder</td>
 <td>left to right</td>
 <td>yes<br>yes<br>yes</td>
 </tr>
 <tr>
 <th>6</th>
-<td>a+b<br>a-b</td>
+<td><code>a+b</code><br><code>a-b</code></td>
 <td>addition<br>subtraction</td>
 <td>left to right</td>
 <td>yes<br>yes</td>
 </tr>
 <tr>
 <th>7</th>
-<td>a&lt;&lt;b<br>a&gt;&gt;b<br>a&gt;&gt;&gt;b<br>a&lt;&lt;&gt;b<br>a&gt;&gt;&lt;b</td>
+<td><code>a&lt;&lt;b</code><br><code>a&gt;&gt;b</code><br><code>a&gt;&gt;&gt;b</code><br><code>a&lt;&lt;&gt;b</code><br><code>a&gt;&gt;&lt;b</code></td>
 <td>left shift<br>logical right shift<br>arithmetic right shift<br>rotate left<br>rotate right</td>
 <td>left to right</td>
 <td>yes<br>yes<br>yes<br>yes<br>yes</td>
 </tr>
-<tr><th>8</th><td>a&amp;b</td><td>bitwise AND</td><td>left to right</td><td>yes</td></tr>
-<tr><th>9</th><td>a^b</td><td>bitwise XOR</td><td>left to right</td><td>yes</td></tr>
-<tr><th>10</th><td>a|b</td><td>bitwise OR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>8</th><td><code>a&amp;b</code></td><td>bitwise AND</td><td>left to right</td><td>yes</td></tr>
+<tr><th>9</th><td><code>a^b</code></td><td>bitwise XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>10</th><td><code>a|b</code></td><td>bitwise OR</td><td>left to right</td><td>yes</td></tr>
 <tr>
 <th>11</th>
-<td>a&lt;b<br>a&gt;b<br>a&lt;=b<br>a&gt;=b<br>a==b<br>a!=b</td>
+<td><code>a&lt;b</code><br><code>a&gt;b</code><br><code>a&lt;=b</code><br><code>a&gt;=b</code><br><code>a==b</code><br><code>a!=b</code></td>
 <td>less than<br>greater than<br>less or equal<br>greater or equal<br>equal to<br>not equal to</td>
 <td>left to right</td>
 <td>yes<br>yes<br>yes<br>yes<br>yes<br>yes</td>
 </tr>
-<tr><th>12</th><td>a and b</td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
-<tr><th>13</th><td>a xor b</td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>12</th><td><code>a and b</code></td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
+<tr><th>13</th><td><code>a xor b</code></td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
 <tr><th>14</th><td><code>a or b</code></td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
 </table>
 
