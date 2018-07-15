@@ -4,46 +4,55 @@
 
 Cog is a C-like systems programming language intented to maximize modular design with simple features for enforcing and testing correctness.
 
-1. [Syntax](#syntax)
-   1. [Program Structure](#program-structure)
-   2. [Program Specification](#program-specification)
+1. [Examples](#examples)
+2. [Benchmarks](#benchmarks)
+3. [Syntax](#syntax)
+   1. [Program Logic](#program-logic)
       * [Comments](#comments)
       * [Variables](#variables)
       * [Expressions](#expressions)
+      * [Static Arrays](#static-arrays)
+      * [Dynamic Arrays](#dynamic-arrays)
+      * [Pointers](#pointers)
       * [Implicit Casting Rules](#implicit-casting-rules)
       * [If Statements](#if-statements)
       * [While Loops](#while-loops)
       * [Functions](#functions)
       * [Inline Assembly](#inline-assembly)
-      * [Constraints](#constraints)
+   2. [Program Structure](#program-structure)
    3. [Source Files](#source-files)
       * [Structures](#structures)
    4. [Interface Files](#interface-files)
       * [Interfaces](#interfaces)
+      * [Protocols](#protocols)
+      * [Encodings](#encodings)
    5. [Test Files](#test-files)
       * [Mocks](#mocks)
       * [Tests](#tests)
+   7. [Program Files](#program-files)
+      * [Linking](#linking)
+      * [Processes](#processes)
+   6. [Metaprogramming](#metaprogramming)
+      * [Templates](#templates)
+      * [Dependencies](#dependencies)
+      * [Constraints](#constraints)
+4. [Compiler](#compiler)
+5. [Debugger](#debugger)
+6. [Documenter](#documenter)
+
+## Examples
+
+## Benchmarks
+
+> No benchmarks have been run at this time.
 
 ## Syntax
 
-### Program Structure
+A formal specification of the grammar follows:
+* [Lex Specificiation](src/Lexer.l)
+* [Yacc Grammar](src/Parser.y)
 
-> This feature is not yet implemented.
-
-
-Cog programs are divided up into four file types that serve different purposes. `.ifc` interface files specify limited interfaces designed for specific purposes. These represent the only way that programs may be linked. This ensures that any or every piece of a code base may be swapped out for something else while guaranteeing correct functionality. `.cog` source files specify implementations and represent the primary content of a library. `.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation. Finally, `.prg` files specify a list of process definitions and the final import and link configurations for those processes.
-
-Dependencies are limited by file type.
-* `.cog` sources my only import `.ifc` interfaces
-* `.ifc` interfaces may only import other `.ifc` interfaces
-* `.tst` tests may import any file type other than `.prg` programs.
-* `.prg` programs may import any file type other than `.tst` tests.
-
-Each source file implements exactly one structure and its associated member functions. Each interface file may implement any number of interfaces and non-member functions. Each interface file is given its own namespace with the same name as the file. Import directives targeted at interface files may either import the whole namespace or specific interfaces and/or functions. Import directives targeted at source files may only import the whole file.
-
-### Program Specification
-
-These represent language constructs that may be found in any of the file types.
+### Program Logic
 
 #### Comments
 
@@ -63,7 +72,16 @@ comment
 > Variable declaration currently limited to one variable with no inline assignment.
 > Pointers and Arrays have not yet been implemented.
 
-The usual primitive types are supported with added support for fixed point numbers and arbitrary character encodings. Here, <n> represents the bitwidth of the type and <m> represents the power of 2 exponent. For example, int32 is a 32 bit signed integer. fixed32e-5 is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
+Variables are declared and assigned using a C-like syntax.
+
+```
+type name;
+type name = value;
+type name0, name1, name2;
+type name0 = value0, name1 = value1, name2 = value2;
+```
+
+The usual primitive types are supported with added support for fixed point numbers. Here, <n> represents the bitwidth of the type and <m> represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
 
 ```
 bool
@@ -73,16 +91,62 @@ fixed<n>e<m>
 ufixed<n>e<m>
 float<n>
 ```
-Both integer and decimal constants are encoded as fixed point numbers with arbitrary precision. This means that all constant expressions will evaluate without any rounding errors. Once all constant expressions are evaluated, the results are implicitly cast to and stored as the type that they are assigned in the program.
 
-Variables are declared and assigned using a C-like syntax.
+Both integer and decimal constants are encoded as fixed point numbers with arbitrary precision. This means that all constant expressions will evaluate at compile time without any rounding errors. Once all constant expressions are evaluated, the results are implicitly cast to and stored as the type that they are assigned in the program. Constants may be specified in base 10 as decimal values with a base 10 exponent or in base 16 or base 2 as integers.
+
 ```
-int32 myInt;
-float32 myFloat = 3.2e5;
-fixed32 v0 = 3.8e10, v1 = 2.4, v2 = 5;
+578
+63e-4
+3.2e6
+0x88af
+0b1001
 ```
 
 #### Expressions
+
+The following table lists the precedence and associativity of all supported operators in descending precedence.
+
+Precedence | Operator | Description | Associativity | Implemented
+---
+**1** | :: | scope resolution | left to right | no
+---
+**2** | a() | function call | left to right | yes
+ | a[] | subscript | | no
+ | a\* a&amp; | pointer dereference, address-of | | no
+ | a{type} | typecast | | no
+ | . | member access | | no
+---
+**3** | ~ | bitwise not | right to left | yes
+ | not | boolean not | | yes
+ | - | negative | | yes
+ | new | allocate memory | | no
+ | delete | deallocate memory | | no
+---
+**4** | a\*b a/b a%b | multiplication, division, remainder | left to right | yes
+---
+**5** | a+b a-b | addition, subtraction | left to right | yes
+---
+**6** | &lt;&lt; &gt;&gt; &gt;&gt;&gt; | left shift, arithmetic right shift, logical right shift | left to right | yes
+ | &lt;&lt;&gt; &gt;&gt;&lt; | rotate left, rotate right | | yes
+---
+**7** | a&amp;b | bitwise AND | left to right | yes
+---
+**8** | a^b | bitwise XOR | left to right | yes
+---
+**9** | a\|b | bitwise OR | left to right | yes
+---
+**10** | a&lt;b | less than | left to right | yes
+ | a&gt;b | greater than |  | yes
+ | a&lt;=b | less or equal |  | yes
+ | a&gt;=b | greater or equal |  | yes
+ | a==b | equal to |  | yes
+ | a!=b | not equal to |  | yes
+---
+**11** | a and b | boolean AND | left to right | yes
+---
+**12** | a xor b | boolean XOR | left to right | yes
+---
+**13** | a or b | boolean OR | left to right | yes
 
 #### Implicit Casting Rules
 
@@ -121,9 +185,99 @@ asm {
 }
 ```
 
-#### Constraints
+### Program Structure
 
 > This feature is not yet implemented.
+
+Cog programs are divided up into four file types that serve different purposes. 
+
+#### Interface Files
+
+`.ifc` files specify limited interfaces designed for specific purposes. These represent the only way that programs may be linked, ensuring that any structure in a code base may be swapped out for something else while guaranteeing correct functionality.
+
+Below shows an example of an interface file for a simple stack. The first line declares a templated type `ValueType` and two interfaces that use that type, `Node` and `Stack`. Finally, it specifies a function `pop()` that is only dependent upon the functionality provided by the interface and therefore automatically implemented for all structures that implement the `Stack` interface.
+
+```
+typename ValueType;
+
+interface Node<ValueType>
+{
+	construct(ValueType value, Node<ValueType> prev*);
+
+	void push(Node<ValueType> list*);
+	Node<ValueType>* pop();
+	ValueType get();
+}
+
+interface Stack<ValueType>
+{
+	void push(ValueType value);
+	void drop();
+	ValueType get();
+
+	ValueType pop()
+	{
+		ValueType result = get();
+		drop();
+		return result;
+	}
+}
+```
+
+#### Cog Source Files
+
+`.cog` files each contain a structure that implements a set of interfaces. These files may import `.ifc` files and create dependent types that are eventually linked in the `.prg` file.
+
+Interface files may be imported in two ways. The `import` directive imports everything from the file and puts it all in the file's namespace while the 'as' directive sets the space's name. Alternatively, elements from may be imported directly via the `from` directive. 
+
+```
+import "Stack.ifc" as StackIfc;
+
+typename ValueType;
+
+struct Stack<ValueType>
+{
+	depend Node implements StackIfc::Node<ValueType>;
+	suggest Node = Node<ValueType> from "Node.cog";
+
+	Node *last;
+
+	construct()
+	{
+	}
+
+	destruct()
+	{
+		if (last)
+			delete last;
+	}
+
+	void push(ValueType value)
+	{
+		Node *node = new Node(value, last);
+		last = node;
+	}
+
+	void drop()
+	{
+		Node *node = last;
+		last = last->pop();
+		delete node;
+	}
+
+	ValueType get()
+	{
+		return last->get();
+	}
+}
+
+keep Stack<ValueType> implements StackIfc::Stack<ValueType>;
+
+```
+
+`.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation.
+
+`.prg` programs specify a the final import and link configurations, and the main behavior of a binary.
 
 ### Source Files
 
@@ -143,6 +297,43 @@ asm {
 
 > This feature is not yet implemented.
 
+Mocks are like structures in that they implement functionality of a given set of interfaces, except that they implement only the functionality necessary to execute the tests.
+
+```
+mock myMock
+{
+};
+```
+
 #### Tests
 
 > This feature is not yet implemented.
+
+Tests specify a contained set of logic that exercises specific functionality of structures or interfaces.
+
+```
+test("My Test")
+{
+	// Do things.
+}
+```
+
+### Metaprogramming
+
+#### Templates
+
+> This feature is not yet implemented.
+
+#### Dependencies
+
+> This feature is not yet implemented.
+
+#### Constraints
+
+> This feature is not yet implemented.
+
+## Compiler
+
+## Debugger
+
+## Documenter
