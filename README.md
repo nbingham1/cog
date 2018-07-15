@@ -4,11 +4,7 @@
 
 Cog is a C-like systems programming language intented to maximize modular design with simple features for enforcing and testing correctness.
 
-1. [Examples](#examples)
-2. [Benchmarks](#benchmarks)
-   1. [Compile Time](#compile-time)
-   2. [Run Time](#run-time)
-4. [Syntax](#syntax)
+1. [Syntax](#syntax)
    1. [Program Structure](#program-structure)
    2. [Program Specification](#program-specification)
       * [Comments](#comments)
@@ -28,42 +24,22 @@ Cog is a C-like systems programming language intented to maximize modular design
       * [Mocks](#mocks)
       * [Tests](#tests)
 
-## Examples
-
-```
-
-```
-
-## Benchmarks
-
-### Compile Time
-
-> No compile time benchmarks have been run.
-
-### Run Time
-
-> No run time benchmarks have been run.
-
 ## Syntax
 
 ### Program Structure
 
 > This feature is not yet implemented.
 
-Cog programs are divided up into three file types that serve different purposes. `.ifc` interface files specify limited interfaces designed for specific purposes. These represent the only way that programs may be linked. This ensures that any or every piece of a code base may be swapped out for something else while guaranteeing correct functionality. `.cog` source files specify implementations with for interfaces and represent the primary content of a program. `.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation.
+
+Cog programs are divided up into four file types that serve different purposes. `.ifc` interface files specify limited interfaces designed for specific purposes. These represent the only way that programs may be linked. This ensures that any or every piece of a code base may be swapped out for something else while guaranteeing correct functionality. `.cog` source files specify implementations and represent the primary content of a library. `.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation. Finally, `.prg` files specify a list of process definitions and the final import and link configurations for those processes.
 
 Dependencies are limited by file type.
 * `.cog` sources my only import `.ifc` interfaces
 * `.ifc` interfaces may only import other `.ifc` interfaces
-* `.tst` tests may import any number of any file type.
+* `.tst` tests may import any file type other than `.prg` programs.
+* `.prg` programs may import any file type other than `.tst` tests.
 
 Each source file implements exactly one structure and its associated member functions. Each interface file may implement any number of interfaces and non-member functions. Each interface file is given its own namespace with the same name as the file. Import directives targeted at interface files may either import the whole namespace or specific interfaces and/or functions. Import directives targeted at source files may only import the whole file.
-
-```
-import path/to/myinterfacesfile
-import myinterface as ifc from path/to/myinterfacesfile
-import path/to/mysourcefile
-```
 
 ### Program Specification
 
