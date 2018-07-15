@@ -81,6 +81,26 @@ type name0, name1, name2;
 type name0 = value0, name1 = value1, name2 = value2;
 ```
 
+However, variable assignment returns void and must be separate statements.
+
+<table>
+<tr><th>Operator</th><th>Description</th><th>Implemented</th></tr>
+<tr><td><code>a=b;</code></td><td>direct assignment</td><td>yes</td></tr>
+<tr><td><code>a+=b;</code></td><td>inplace add</td><td>no</td></tr>
+<tr><td><code>a-=b;</code></td><td>inplace subtract</td><td>no</td></tr>
+<tr><td><code>a&#42;=b;</code></td><td>inplace multiply</td><td>no</td></tr>
+<tr><td><code>a/=b;</code></td><td>inplace divide</td><td>no</td></tr>
+<tr><td><code>a%=b;</code></td><td>inplace remainder</td><td>no</td></tr>
+<tr><td><code>a&lt;&lt;=b;</code></td><td>inplace left shift</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;=b;</code></td><td>inplace logical right shift</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;&gt;=b;</code></td><td>inplace arithmetic right shift</td><td>no</td></tr>
+<tr><td><code>a&lt;&lt;&gt;=b;</code></td><td>inplace rotate left</td><td>no</td></tr>
+<tr><td><code>a&gt;&gt;&lt;=b;</code></td><td>inplace rotate right</td><td>no</td></tr>
+<tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>no</td></tr>
+<tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>no</td></tr>
+<tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>no</td></tr>
+</table>
+
 The usual primitive types are supported with added support for fixed point numbers. Here, <n> represents the bitwidth of the type and <m> represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
 
 ```
@@ -101,26 +121,6 @@ Both integer and decimal constants are encoded as fixed point numbers with arbit
 0x88af
 0b1001
 ```
-
-Variable assignment returns void and must be separate statements.
-
-<table>
-<tr><th>Operator</th><th>Description</th><th>Implemented</th></tr>
-<tr><td><code>a=b;</code></td><td>direct assignment</td><td>yes</td></tr>
-<tr><td><code>a+=b;</code></td><td>inplace add</td><td>no</td></tr>
-<tr><td><code>a-=b;</code></td><td>inplace subtract</td><td>no</td></tr>
-<tr><td><code>a&#42;=b;</code></td><td>inplace multiply</td><td>no</td></tr>
-<tr><td><code>a/=b;</code></td><td>inplace divide</td><td>no</td></tr>
-<tr><td><code>a%=b;</code></td><td>inplace remainder</td><td>no</td></tr>
-<tr><td><code>a&lt;&lt;=b;</code></td><td>inplace left shift</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;=b;</code></td><td>inplace logical right shift</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;&gt;=b;</code></td><td>inplace arithmetic right shift</td><td>no</td></tr>
-<tr><td><code>a&lt;&lt;&gt;=b;</code></td><td>inplace rotate left</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;&lt;=b;</code></td><td>inplace rotate right</td><td>no</td></tr>
-<tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>no</td></tr>
-<tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>no</td></tr>
-<tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>no</td></tr>
-</table>
 
 #### Expressions
 
@@ -182,6 +182,8 @@ The following table lists the precedence and associativity of all supported oper
 
 #### Implicit Casting Rules
 
+
+
 #### If Statements
 
 If statements have the usual C syntax and behave as one might expect. Spacing doesn't matter, but the conditions must be wrapped in parenthesis. While single line statements in the body of an if don't need curly brackets, multiline statement blocks do.
@@ -212,8 +214,11 @@ while (j < 20)
 
 > This feature is unstable.
 
+Inline assembly uses AT&T syntax. Each line specifies an instruction, and each instruction has a list of comma separated operands. Registers are denoted by `%name`, constants by `$value`, and program variables by their name.
+
 ```
 asm {
+
 }
 ```
 
