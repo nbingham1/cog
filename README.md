@@ -108,41 +108,56 @@ The following table lists the precedence and associativity of all supported oper
 
 <table>
 <tr><th>Precedence</th><th>Operator</th><th>Description</th><th>Associativity</th><th>Implemented</th></tr>
-<tr><td>**1**</td><td>(a)</td><td>parenthesis</td><td></td><td>yes</td></tr>
-<tr><td>**2**</td><td>a::b</td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
+<tr><th>1</th><td>(a)</td><td>parenthesis</td><td></td><td>yes</td></tr>
+<tr><th>2</th><td>a::b</td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
 <tr>
-<td>**3**</td>
-<td>a()<br>a\[\]<br>a\* a&amp;<br>a{b}<br>a.b</td>
+<th>3</th>
+<td>a()<br>a[]<br>a&#42; a&amp;<br>a{b}<br>a.b</td>
 <td>function call<br>subscript<br>pointer dereference, address-of<br>typecast<br>member access</td>
 <td>left to right</td>
 <td>yes<br>no<br>no<br>no<br>no</td>
 </tr>
 <tr>
-<td>**4**</td>
+<th>4</th>
 <td>~a<br>not a<br>-a<br>new a<br>delete a</td>
 <td>bitwise not<br>boolean not<br>negative<br>allocate memory<br>deallocate memory</td>
 <td>right to left</td>
 <td>yes<br>yes<br>yes<br>no<br>no</td>
 </tr>
-<tr><td>**5**</td><td>a\*b a/b a%b</td><td>multiplication, division, remainder</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**6**</td><td>a+b a-b</td><td>addition, subtraction</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**7**</td><td>a&lt;&lt;b</td><td>left shift</td><td>left to right</td><td>yes</td></tr>
-<tr><td></td><td>a&gt;&gt;b</td><td>arithmetic right shift</td><td>left to right</td><td>yes</td></tr>
-<tr><td></td><td>a&gt;&gt;&gt;b</td><td>logical right shift</td><td>left to right</td><td>yes</td></tr>
-<tr><td></td><td>a&lt;&lt;&gt;b</td><td>rotate left</td><td></td><td>yes</td></tr>
-<tr><td></td><td>a&gt;&gt;&lt;b</td><td>rotate right</td><td></td><td>yes</td></tr>
-<tr><td>**8**</td><td>a&amp;b</td><td>bitwise AND</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**9**</td><td>a^b</td><td>bitwise XOR</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**10**</td><td>a\|b</td><td>bitwise OR</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**11**</td><td>a&lt;b</td><td>less than</td><td>left to right</td><td>yes</td></tr>
-<tr><td></td><td>a&gt;b</td><td>greater than</td><td></td><td>yes</td></tr>
-<tr><td></td><td>a&lt;=b</td><td>less or equal</td><td></td><td>yes</td></tr>
-<tr><td></td><td>a&gt;=b</td><td>greater or equal</td><td></td><td>yes</td></tr>
-<tr><td></td><td>a==b</td><td>equal to</td><td></td><td>yes</td></tr>
-<tr><td></td><td>a!=b</td><td>not equal to</td><td></td><td>yes</td></tr>
-<tr><td>**12**</td><td>a and b</td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**13**</td><td>a xor b</td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
-<tr><td>**14**</td><td>a or b</td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
+<tr>
+<th>5</th>
+<td>a&#42;b<br>a/b<br>a%b</td>
+<td>multiplication<br>division<br>remainder</td>
+<td>left to right</td>
+<td>yes<br>yes<br>yes</td>
+</tr>
+<tr>
+<th>6</th>
+<td>a+b<br>a-b</td>
+<td>addition<br>subtraction</td>
+<td>left to right</td>
+<td>yes<br>yes</td>
+</tr>
+<tr>
+<th>7</th>
+<td>a&lt;&lt;b<br>a&gt;&gt;b<br>a&gt;&gt;&gt;b<br>a&lt;&lt;&gt;b<br>a&gt;&gt;&lt;b</td>
+<td>left shift<br>arithmetic right shift<br>logical right shift<br>rotate left<br>rotate right</td>
+<td>left to right</td>
+<td>yes<br>yes<br>yes<br>yes<br>yes</td>
+</tr>
+<tr><th>8</th><td>a&amp;b</td><td>bitwise AND</td><td>left to right</td><td>yes</td></tr>
+<tr><th>9</th><td>a^b</td><td>bitwise XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>10</th><td>a|b</td><td>bitwise OR</td><td>left to right</td><td>yes</td></tr>
+<tr>
+<th>11</th>
+<td>a&lt;b<br>a&gt;b<br>a&lt;=b<br>a&gt;=b<br>a==b<br>a!=b</td>
+<td>less than<br>greater than<br>less or equal<br>greater or equal<br>equal to<br>not equal to</td>
+<td>left to right</td>
+<td>yes<br>yes<br>yes<br>yes<br>yes<br>yes</td>
+</tr>
+<tr><th>12</th><td>a and b</td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
+<tr><th>13</th><td>a xor b</td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><th>14</th><td>a or b</td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
 </table>
 
 #### Implicit Casting Rules
