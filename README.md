@@ -106,47 +106,39 @@ Both integer and decimal constants are encoded as fixed point numbers with arbit
 
 The following table lists the precedence and associativity of all supported operators in descending precedence.
 
-Precedence | Operator | Description | Associativity | Implemented
----
-**1** | :: | scope resolution | left to right | no
----
-**2** | a() | function call | left to right | yes
- | a[] | subscript | | no
- | a\* a&amp; | pointer dereference, address-of | | no
- | a{type} | typecast | | no
- | . | member access | | no
----
-**3** | ~ | bitwise not | right to left | yes
- | not | boolean not | | yes
- | - | negative | | yes
- | new | allocate memory | | no
- | delete | deallocate memory | | no
----
-**4** | a\*b a/b a%b | multiplication, division, remainder | left to right | yes
----
-**5** | a+b a-b | addition, subtraction | left to right | yes
----
-**6** | &lt;&lt; &gt;&gt; &gt;&gt;&gt; | left shift, arithmetic right shift, logical right shift | left to right | yes
- | &lt;&lt;&gt; &gt;&gt;&lt; | rotate left, rotate right | | yes
----
-**7** | a&amp;b | bitwise AND | left to right | yes
----
-**8** | a^b | bitwise XOR | left to right | yes
----
-**9** | a\|b | bitwise OR | left to right | yes
----
-**10** | a&lt;b | less than | left to right | yes
- | a&gt;b | greater than |  | yes
- | a&lt;=b | less or equal |  | yes
- | a&gt;=b | greater or equal |  | yes
- | a==b | equal to |  | yes
- | a!=b | not equal to |  | yes
----
-**11** | a and b | boolean AND | left to right | yes
----
-**12** | a xor b | boolean XOR | left to right | yes
----
-**13** | a or b | boolean OR | left to right | yes
+| Precedence | Operator | Description | Associativity | Implemented
+| --- | --- | --- | --- | ---
+| **1** | (a) | parenthesis | | yes
+| **2** | a::b | scope resolution | left to right | no
+| **3** | a() | function call | left to right | yes
+| | a\[\] | subscript | | no
+| | a\* a&amp; | pointer dereference, address-of | | no
+| | a{b} | typecast | | no
+| | a.b | member access | | no
+| **4** | ~a | bitwise not | right to left | yes
+| | not a | boolean not | | yes
+| | -a | negative | | yes
+| | new a | allocate memory | | no
+| | delete a | deallocate memory | | no
+| **5** | a\*b a/b a%b | multiplication, division, remainder | left to right | yes
+| **6** | a+b a-b | addition, subtraction | left to right | yes
+| **7** | a&lt;&lt;b | left shift | left to right | yes
+| | a&gt;&gt;b | arithmetic right shift | left to right | yes
+| | a&gt;&gt;&gt;b | logical right shift | left to right | yes
+| | a&lt;&lt;&gt;b | rotate left | | yes
+| | a&gt;&gt;&lt;b | rotate right | | yes
+| **8** | a&amp;b | bitwise AND | left to right | yes
+| **9** | a^b | bitwise XOR | left to right | yes
+| **10** | a\|b | bitwise OR | left to right | yes
+| **11** | a&lt;b | less than | left to right | yes
+| | a&gt;b | greater than |  | yes
+| | a&lt;=b | less or equal |  | yes
+| | a&gt;=b | greater or equal |  | yes
+| | a==b | equal to |  | yes
+| | a!=b | not equal to |  | yes
+| **12** | a and b | boolean AND | left to right | yes
+| **13** | a xor b | boolean XOR | left to right | yes
+| **14** | a or b | boolean OR | left to right | yes
 
 #### Implicit Casting Rules
 
