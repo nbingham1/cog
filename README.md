@@ -106,39 +106,44 @@ Both integer and decimal constants are encoded as fixed point numbers with arbit
 
 The following table lists the precedence and associativity of all supported operators in descending precedence.
 
-| Precedence | Operator | Description | Associativity | Implemented
-| --- | --- | --- | --- | ---
-| **1** | (a) | parenthesis | | yes
-| **2** | a::b | scope resolution | left to right | no
-| **3** | a() | function call | left to right | yes
-| | a\[\] | subscript | | no
-| | a\* a&amp; | pointer dereference, address-of | | no
-| | a{b} | typecast | | no
-| | a.b | member access | | no
-| **4** | ~a | bitwise not | right to left | yes
-| | not a | boolean not | | yes
-| | -a | negative | | yes
-| | new a | allocate memory | | no
-| | delete a | deallocate memory | | no
-| **5** | a\*b a/b a%b | multiplication, division, remainder | left to right | yes
-| **6** | a+b a-b | addition, subtraction | left to right | yes
-| **7** | a&lt;&lt;b | left shift | left to right | yes
-| | a&gt;&gt;b | arithmetic right shift | left to right | yes
-| | a&gt;&gt;&gt;b | logical right shift | left to right | yes
-| | a&lt;&lt;&gt;b | rotate left | | yes
-| | a&gt;&gt;&lt;b | rotate right | | yes
-| **8** | a&amp;b | bitwise AND | left to right | yes
-| **9** | a^b | bitwise XOR | left to right | yes
-| **10** | a\|b | bitwise OR | left to right | yes
-| **11** | a&lt;b | less than | left to right | yes
-| | a&gt;b | greater than |  | yes
-| | a&lt;=b | less or equal |  | yes
-| | a&gt;=b | greater or equal |  | yes
-| | a==b | equal to |  | yes
-| | a!=b | not equal to |  | yes
-| **12** | a and b | boolean AND | left to right | yes
-| **13** | a xor b | boolean XOR | left to right | yes
-| **14** | a or b | boolean OR | left to right | yes
+<table>
+<tr><th>Precedence</th><th>Operator</th><th>Description</th><th>Associativity</th><th>Implemented</th></tr>
+<tr><td>**1**</td><td>(a)</td><td>parenthesis</td><td></td><td>yes</td></tr>
+<tr><td>**2**</td><td>a::b</td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
+<tr>
+<td>**3**</td>
+<td>a()<br>a\[\]<br>a\* a&amp;<br>a{b}<br>a.b</td>
+<td>function call<br>subscript<br>pointer dereference, address-of<br>typecast<br>member access</td>
+<td>left to right</td>
+<td>yes<br>no<br>no<br>no<br>no</td>
+</tr>
+<tr>
+<td>**4**</td>
+<td>~a<br>not a<br>-a<br>new a<br>delete a</td>
+<td>bitwise not<br>boolean not<br>negative<br>allocate memory<br>deallocate memory</td>
+<td>right to left</td>
+<td>yes<br>yes<br>yes<br>no<br>no</td>
+</tr>
+<tr><td>**5**</td><td>a\*b a/b a%b</td><td>multiplication, division, remainder</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**6**</td><td>a+b a-b</td><td>addition, subtraction</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**7**</td><td>a&lt;&lt;b</td><td>left shift</td><td>left to right</td><td>yes</td></tr>
+<tr><td></td><td>a&gt;&gt;b</td><td>arithmetic right shift</td><td>left to right</td><td>yes</td></tr>
+<tr><td></td><td>a&gt;&gt;&gt;b</td><td>logical right shift</td><td>left to right</td><td>yes</td></tr>
+<tr><td></td><td>a&lt;&lt;&gt;b</td><td>rotate left</td><td></td><td>yes</td></tr>
+<tr><td></td><td>a&gt;&gt;&lt;b</td><td>rotate right</td><td></td><td>yes</td></tr>
+<tr><td>**8**</td><td>a&amp;b</td><td>bitwise AND</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**9**</td><td>a^b</td><td>bitwise XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**10**</td><td>a\|b</td><td>bitwise OR</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**11**</td><td>a&lt;b</td><td>less than</td><td>left to right</td><td>yes</td></tr>
+<tr><td></td><td>a&gt;b</td><td>greater than</td><td></td><td>yes</td></tr>
+<tr><td></td><td>a&lt;=b</td><td>less or equal</td><td></td><td>yes</td></tr>
+<tr><td></td><td>a&gt;=b</td><td>greater or equal</td><td></td><td>yes</td></tr>
+<tr><td></td><td>a==b</td><td>equal to</td><td></td><td>yes</td></tr>
+<tr><td></td><td>a!=b</td><td>not equal to</td><td></td><td>yes</td></tr>
+<tr><td>**12**</td><td>a and b</td><td>boolean AND</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**13**</td><td>a xor b</td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
+<tr><td>**14**</td><td>a or b</td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
+</table>
 
 #### Implicit Casting Rules
 
