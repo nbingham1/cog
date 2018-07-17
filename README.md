@@ -20,16 +20,16 @@ Cog is a C-like systems programming language intented to maximize modular design
       * [Functions](#functions)
       * [Inline Assembly](#inline-assembly)
    2. [Program Structure](#program-structure)
-   3. [Source Files](#source-files)
+   1. [Source Files](#source-files)
       * [Structures](#structures)
-   4. [Interface Files](#interface-files)
+   2. [Interface Files](#interface-files)
       * [Interfaces](#interfaces)
       * [Protocols](#protocols)
       * [Encodings](#encodings)
-   5. [Test Files](#test-files)
+   3. [Test Files](#test-files)
       * [Mocks](#mocks)
       * [Tests](#tests)
-   7. [Program Files](#program-files)
+   4. [Program Files](#program-files)
       * [Linking](#linking)
       * [Processes](#processes)
    6. [Metaprogramming](#metaprogramming)
@@ -132,7 +132,7 @@ The following table lists the precedence and associativity of all supported oper
 <tr><th>2</th><td><code>a::b</code></td><td>scope resolution</td><td>left to right</td><td>no</td></tr>
 <tr>
 <th>3</th>
-<td><code>a()</code><br><code>a[]</code><br><code>a&#42;</code><br><code>a&amp;</code><br><code>a{b}</code><br><code>a.b</code></td>
+<td><code>a()</code><br><code>a[]</code><br><code>a&#42;</code><br><code>a&amp;</code><br><code>type(b)</code><br><code>a.b</code></td>
 <td>function call<br>subscript<br>pointer dereference<br>address-of<br>typecast<br>member access</td>
 <td>left to right</td>
 <td>yes<br>no<br>no<br>no<br>no<br>no</td>
@@ -208,8 +208,6 @@ while (j < 20)
   // Do one statement
 ```
 
-#### Functions
-
 #### Inline Assembly
 
 > This feature is unstable.
@@ -217,23 +215,26 @@ while (j < 20)
 Inline assembly uses AT&T syntax. Each line specifies an instruction, and each instruction has a list of comma separated operands. Registers are denoted by `%name`, constants by `$value`, and program variables by their name.
 
 ```
-asm {
+int32 count = 5;
+int32 value = 1;
 
+asm {
+loop:
+	mul $2, value
+	dec count
+	jnz count, loop
 }
+
+fixed32 inv_value = 1/fixed32(value);
 ```
 
-### Program Structure
-
-> This feature is not yet implemented.
-
-Cog programs are divided up into four file types that serve different purposes. 
-
-#### Interface Files
+### Interface Files
 
 `.ifc` files specify limited interfaces designed for specific purposes. These represent the only way that programs may be linked, ensuring that any structure in a code base may be swapped out for something else while guaranteeing correct functionality.
 
 Below shows an example of an interface file for a simple stack. The first line declares a templated type `ValueType` and two interfaces that use that type, `Node` and `Stack`. Finally, it specifies a function `pop()` that is only dependent upon the functionality provided by the interface and therefore automatically implemented for all structures that implement the `Stack` interface.
 
+**Stack.ifc**
 ```
 typename ValueType;
 
@@ -251,22 +252,70 @@ interface Stack<ValueType>
 	void push(ValueType value);
 	void drop();
 	ValueType get();
+}
 
-	ValueType pop()
-	{
-		ValueType result = get();
-		drop();
-		return result;
-	}
+ValueType Stack<ValueType>::pop()
+{
+	ValueType result = get();
+	drop();
+	return result;
 }
 ```
 
-#### Cog Source Files
+#### Interfaces
+
+> This feature is not yet implemented.
+
+### Source Files
 
 `.cog` files each contain a structure that implements a set of interfaces. These files may import `.ifc` files and create dependent types that are eventually linked in the `.prg` file.
 
 Interface files may be imported in two ways. The `import` directive imports everything from the file and puts it all in the file's namespace while the 'as' directive sets the space's name. Alternatively, elements from may be imported directly via the `from` directive. 
 
+**Node.cog**
+```
+typename ValueType;
+
+struct Node<ValueType>
+{
+	ValueType value;
+	Node<ValueType> *prev;
+};
+
+keep Node<ValueType> implements Node<ValueType> from "Stack.ifc";
+
+Node<ValueType>::new(ValueType value, Node<ValueType> *prev)
+{
+	this->value = value;
+	this->prev = prev;
+}
+
+Node<ValueType>::delete()
+{
+	if (prev)
+		delete prev;
+}
+
+void Node<ValueType>::push(Node<ValueType> list*)
+{
+	assert not prev;
+	prev = list;
+}
+
+Node<ValueType>* Node<ValueType>::pop()
+{
+	Node<ValueType> result* = prev;
+	prev = null;
+	return result;
+}
+
+ValueType Node<ValueType>::get()
+{
+	return value;
+}
+```
+
+**Stack.cog**
 ```
 import "Stack.ifc" as StackIfc;
 
@@ -278,57 +327,67 @@ struct Stack<ValueType>
 	suggest Node = Node<ValueType> from "Node.cog";
 
 	Node *last;
-
-	construct()
-	{
-	}
-
-	destruct()
-	{
-		if (last)
-			delete last;
-	}
-
-	void push(ValueType value)
-	{
-		Node *node = new Node(value, last);
-		last = node;
-	}
-
-	void drop()
-	{
-		Node *node = last;
-		last = last->pop();
-		delete node;
-	}
-
-	ValueType get()
-	{
-		return last->get();
-	}
 }
 
 keep Stack<ValueType> implements StackIfc::Stack<ValueType>;
 
+Stack<ValueType>::new()
+{
+}
+
+Stack<ValueType>::delete()
+{
+	if (last)
+		delete last;
+}
+
+void Stack<ValueType>::push(ValueType value)
+{
+	Node *node = new Node(value, last);
+	last = node;
+}
+
+void Stack<ValueType>::drop()
+{
+	Node *node = last;
+	last = last->pop();
+	delete node;
+}
+
+ValueType Stack<ValueType>::get()
+{
+	return last->get();
+}
+
 ```
-
-`.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation.
-
-`.prg` programs specify a the final import and link configurations, and the main behavior of a binary.
-
-### Source Files
 
 #### Structures
 
 > This feature is not yet implemented.
 
-### Interface Files
-
-#### Interfaces
-
-> This feature is not yet implemented.
+#### Functions
 
 ### Test Files
+
+`.tst` test files specify an array of tests on interfaces, structures, and functions that check their implementation.
+
+
+**Stack.tst**
+```
+depend IntStack implements Stack<int32> from "Stack.ifc";
+
+test("myStackTest")
+{
+	IntStack stack;
+	stack.push(5);
+	stack.push(3);
+	stack.push(6);
+	assert stack.get() == 6;
+	assert stack.pop() == 6;
+	stack.drop();
+	assert stack.pop() == 5;
+}
+```
 
 #### Mocks
 
@@ -337,7 +396,7 @@ keep Stack<ValueType> implements StackIfc::Stack<ValueType>;
 Mocks are like structures in that they implement functionality of a given set of interfaces, except that they implement only the functionality necessary to execute the tests.
 
 ```
-mock myMock
+mock MockNode
 {
 };
 ```
@@ -355,11 +414,50 @@ test("My Test")
 }
 ```
 
+### Program Files
+
+`.prg` programs specify a the final import and link configurations, and the main behavior of a binary.
+
+```
+typename ValueType;
+
+import Stack<ValueType> from "Stack.cog" {
+	// This dependency resolution isn't necessary
+	// because of the suggest in Stack.cog
+	Node = Node<ValueType> from "Node.cog";
+}
+
+void main()
+{
+	// Do something
+}
+```
+
 ### Metaprogramming
 
 #### Templates
 
 > This feature is not yet implemented.
+
+Templated typenames may be specified at the global scope of a file, constrained for specific uses, and then used throughout the file. Interfaces, Protocols, Structures, Functions, Mocks, and Tests may all be templated. This is done with the templating operator `<types...>` after their names.
+
+```
+typename myType1;
+keep MyType in [int32, float32];
+
+typename myType2;
+keep MyType2 implements MyInterface;
+
+struct MyStruct<MyType, MyType2>
+{
+	MyType value0;
+	MyType2 value1;
+};
+
+void myFunc<MyType, MyType2>(MyType a, MyType2 b)
+{
+}
+```
 
 #### Dependencies
 
