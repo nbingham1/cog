@@ -19,17 +19,16 @@ Cog is a C-like systems programming language intented to maximize modular design
       * [While Loops](#while-loops)
       * [Functions](#functions)
       * [Inline Assembly](#inline-assembly)
-   2. [Program Structure](#program-structure)
-   1. [Source Files](#source-files)
+   2. [Source Files](#source-files)
       * [Structures](#structures)
-   2. [Interface Files](#interface-files)
+   3. [Interface Files](#interface-files)
       * [Interfaces](#interfaces)
       * [Protocols](#protocols)
       * [Encodings](#encodings)
-   3. [Test Files](#test-files)
+   4. [Test Files](#test-files)
       * [Mocks](#mocks)
       * [Tests](#tests)
-   4. [Program Files](#program-files)
+   5. [Program Files](#program-files)
       * [Linking](#linking)
       * [Processes](#processes)
    6. [Metaprogramming](#metaprogramming)
@@ -208,6 +207,28 @@ while (j < 20)
   // Do one statement
 ```
 
+#### Functions
+
+> Functions aren't yet connected to the type system.
+
+Functions are declared using syntax similar to C++ but with behavior similar to Go. The receiver is specified with a scope resolution operator. However functions cannot be defined inside a structure. They must be explicitly defined outside. Functions without the receiver are defined like any other function in C++.
+
+```
+struct MyStruct
+{
+}
+
+int32 MyStruct::myFunc(int32 myArg, int32 myArg2)
+{
+	// Do things.
+}
+
+int32 myFunc2(int32 myArg, int32 myArg2)
+{
+	// Do Things.
+}
+```
+
 #### Inline Assembly
 
 > This feature is unstable.
@@ -364,8 +385,6 @@ ValueType Stack<ValueType>::get()
 #### Structures
 
 > This feature is not yet implemented.
-
-#### Functions
 
 ### Test Files
 
