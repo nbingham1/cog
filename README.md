@@ -29,8 +29,6 @@ Cog is a C-like systems programming language intented to maximize modular design
       * [Mocks](#mocks)
       * [Tests](#tests)
    5. [Program Files](#program-files)
-      * [Linking](#linking)
-      * [Processes](#processes)
    6. [Metaprogramming](#metaprogramming)
       * [Templates](#templates)
       * [Dependencies](#dependencies)
@@ -179,6 +177,15 @@ The following table lists the precedence and associativity of all supported oper
 <tr><th>14</th><td><code>a or b</code></td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
 </table>
 
+#### Static Arrays
+
+
+#### Dynamic Arrays
+
+
+#### Pointers
+
+
 #### Implicit Casting Rules
 
 
@@ -240,10 +247,13 @@ int32 count = 5;
 int32 value = 1;
 
 asm {
+	mov value, %eax
+	mov count, %ebx
 loop:
-	mul $2, value
-	dec count
-	jnz count, loop
+	mul $2, %eax
+	dec %ebx
+	jnz %ebx, loop
+	mov %eax, value
 }
 
 fixed32 inv_value = 1/fixed32(value);
@@ -284,6 +294,14 @@ ValueType Stack<ValueType>::pop()
 ```
 
 #### Interfaces
+
+> This feature is not yet implemented.
+
+#### Protocols
+
+> This feature is not yet implemented.
+
+#### Encodings
 
 > This feature is not yet implemented.
 
