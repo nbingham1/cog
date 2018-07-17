@@ -10,10 +10,10 @@ Cog is a C-like systems programming language intented to maximize modular design
    1. [Program Logic](#program-logic)
       * [Comments](#comments)
       * [Variables](#variables)
-      * [Expressions](#expressions)
       * [Static Arrays](#static-arrays)
       * [Dynamic Arrays](#dynamic-arrays)
       * [Pointers](#pointers)
+      * [Expressions](#expressions)
       * [Implicit Casting Rules](#implicit-casting-rules)
       * [If Statements](#if-statements)
       * [While Loops](#while-loops)
@@ -119,6 +119,62 @@ Both integer and decimal constants are encoded as fixed point numbers with arbit
 0b1001
 ```
 
+#### Static Arrays
+
+> This feature is not yet implemented.
+
+Static arrays are declared the same as in C++, the array dimensions are specified after the variable name in the declaration and may only be compile time constants. They are also indexed similary to C++. Static arrays also carry with them compile-time size attributes which may be accessed directly.
+
+```
+int32 myArr[32][6][3];
+
+myArr[3][2][1] = 5;
+
+int32 width = myArr.size[0];
+int32 height = myArr.size[1];
+int32 depth = myArr.size[2];
+```
+
+#### Dynamic Arrays
+
+> This feature is not yet implemented.
+
+Dynamically allocated arrays are specified separately from pointers in Cog with empty array brackets. They may then be allocated as multidimensional arrays then used as expected. Finally, they must be deleted after use. Dynamic arrays carry with them size attributes that are set upon allocation.
+
+```
+int32 myArr[][][];
+
+myArr = new int32[32][6][3];
+
+myArr[3][2][1] = 5;
+
+int32 width = myArr.size[0];
+int32 height = myArr.size[1];
+int32 depth = myArr.size[2];
+
+delete myArr;
+```
+
+#### Pointers
+
+> This feature is not yet implemented.
+
+Pointers may only point to a single value.
+
+```
+MyStruct myPtr*;
+
+myPtr = new MyStruct();
+
+int32 valuePtr*;
+valuePtr = myPtr*.myMember&;
+valuePtr* = 3;
+
+int32 myValue = myPtr*.myMember;
+
+delete myPtr;
+```
+
 #### Expressions
 
 The following table lists the precedence and associativity of all supported operators in descending precedence.
@@ -176,15 +232,6 @@ The following table lists the precedence and associativity of all supported oper
 <tr><th>13</th><td><code>a xor b</code></td><td>boolean XOR</td><td>left to right</td><td>yes</td></tr>
 <tr><th>14</th><td><code>a or b</code></td><td>boolean OR</td><td>left to right</td><td>yes</td></tr>
 </table>
-
-#### Static Arrays
-
-
-#### Dynamic Arrays
-
-
-#### Pointers
-
 
 #### Implicit Casting Rules
 
