@@ -731,11 +731,7 @@ Info *binaryOperator(Info *left, int op, Info *right)
 					left->value = cog.builder.CreateMul(left->value, right->value);
 				break;
 			case '/':
-				printf("%x %x\n", left, left->value);
-				printf("%x %x\n", right, right->value);
 				binaryTypecheck(left, right);
-				printf("%x %x\n", left, left->value);
-				printf("%x %x\n", right, right->value);
 				if (lt->isFloatingPointTy())
 					left->value = cog.builder.CreateFDiv(left->value, right->value);
 				else if (lp->kind == PrimType::Unsigned)
