@@ -235,7 +235,7 @@ The following table lists the precedence and associativity of all supported oper
 
 #### Implicit Casting Rules
 
-
+Primitive types are implicitly cast when doing so would not lose significant bits. This means that implicit casts can cause loss in precision.
 
 #### If Statements
 
@@ -263,7 +263,7 @@ while (j < 20)
 
 #### Functions
 
-> Functions aren't yet connected to the type system.
+> Member functions are not yet implemented.
 
 Functions are declared using syntax similar to C++ but with behavior similar to Go. The receiver is specified with a scope resolution operator. However functions cannot be defined inside a structure. They must be explicitly defined outside. Functions without the receiver are defined like any other function in C++.
 
