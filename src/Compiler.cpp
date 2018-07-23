@@ -10,6 +10,7 @@ Compiler::Compiler() : builder(context)
 {
 	targetTriple = "";
 	scopes.push_back(Scope());
+	currFn = NULL;
 }
 
 Compiler::~Compiler()
@@ -38,6 +39,83 @@ void Compiler::popScope()
 {
 	scopes[scopes.size()-2].merge(&scopes.back());
 	scopes.pop_back();
+}
+
+BaseType *Compiler::getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Declaration> &args)
+{
+	for (auto type = types.begin(); type != types.end(); type++) {
+		if (type->name == name
+		 && type->retType == retType
+		 && type->thisType == thisType
+		 && type->args == args) {
+			return &(*type);
+		}
+	}
+
+	types.push_back(BaseType());
+	BaseType *result = &types.back();
+	result->retType = retType;
+	result->thisType = thisType;
+	result->name = name;
+	result->args = args;
+
+	std::vector<llvm::Type*> llvmArgs;
+	llvmArgs.reserve(args.size()+1);
+	if (thisType.isSet() && (thisType.prim == NULL || thisType.prim->kind != PrimType::Void))
+		llvmArgs.push_back(thisType.getLlvm());
+
+	for (auto arg = args.begin(); arg != args.end(); arg++) {
+		llvmArgs.push_back(arg->type.getLlvm());
+	}
+
+	result->llvmType = FunctionType::get(retType.getLlvm(), llvmArgs, false);
+	return result;
+}
+
+BaseType *Compiler::getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Symbol> &symbols)
+{
+	std::vector<Declaration> args;
+	args.reserve(symbols.size());
+	for (auto symbol = symbols.begin(); symbol != symbols.end(); symbol++)
+		args.push_back(Declaration(&(*symbol)));
+
+	return getFunction(retType, thisType, name, args);
+}
+
+BaseType *Compiler::getStructure(std::string name, const std::vector<Declaration> &args)
+{
+	for (auto type = types.begin(); type != types.end(); type++) {
+		if (type->name == name
+		 && !type->retType.isSet()
+		 && !type->thisType.isSet()
+		 && type->args == args) {
+			return &(*type);
+		}
+	}
+
+	types.push_back(BaseType());
+	BaseType *result = &types.back();
+	result->name = name;
+	result->args = args;
+
+	std::vector<llvm::Type*> llvmArgs;
+	for (auto arg = args.begin(); arg != args.end(); arg++) {
+		llvmArgs.push_back(arg->type.getLlvm());
+	}
+
+	result->llvmType = StructType::create(context, llvmArgs, name, false);
+
+	return result;
+}
+
+BaseType *Compiler::getStructure(std::string name, const std::vector<Symbol> &symbols)
+{
+	std::vector<Declaration> args;
+	args.reserve(symbols.size());
+	for (auto symbol = symbols.begin(); symbol != symbols.end(); symbol++)
+		args.push_back(Declaration(&(*symbol)));
+
+	return getStructure(name, args);
 }
 
 void Compiler::loadFile(string filename)

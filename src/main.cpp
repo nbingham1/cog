@@ -26,8 +26,11 @@ int main(int argc, char **argv)
 	cog.getScope()->setBlock(_startBody);
 	cog.builder.SetInsertPoint(_startBody);
 	
+	for (auto type = cog.types.begin(); type != cog.types.end(); type++)
+		printf("%s\n", type->getName().c_str());
+
 	vector<Value*> argValues;
-	cog.builder.CreateCall(cog.module->getFunction("main"), argValues);
+	cog.builder.CreateCall(cog.module->getFunction("(void)main"), argValues);
 	cog.createExit();
 
 	cog.setTarget();

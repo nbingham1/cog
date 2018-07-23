@@ -9,10 +9,11 @@ Info *getTypename(int token, char *txt);
 Info *getConstant(int token, char *txt);
 Info *getIdentifier(char *txt);
 
-Info *castType(Info *from, Info *to);
-bool canImplicitCast(Info *from, Info *to);
-void unaryTypecheck(Info *left, Info *expected);
-void binaryTypecheck(Info *left, Info *right, Info *expected = NULL);
+llvm::Value *castType(llvm::Value *value, Typename from, Typename to);
+Info *castType(Info *from, const Typename &to);
+bool canImplicitCast(const Typename &from, const Typename &to);
+void unaryTypecheck(Info *left, const Typename &expect);
+void binaryTypecheck(Info *left, Info *right, Typename *expect = NULL);
 
 Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);
@@ -22,13 +23,13 @@ void assignSymbol(Info *symbol, Info *value);
 
 void structureDefinition(char *name);
 
-void functionPrototype(Info *retType, char *name, Info *typeList);
+Info *functionPrototype(Info *retType, char *name);
 void functionDeclaration(Info *retType, char *name); 
 void functionDefinition();
 void returnValue(Info *value);
 void returnVoid();
 
-void callFunction(char *txt, Info *args);
+void callFunction(char *txt, Info *argList);
 
 void ifCondition(Info *cond);
 void elseifCondition();

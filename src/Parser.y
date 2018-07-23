@@ -38,8 +38,8 @@ program
 
 block
 	: structure_declaration
-	| function_prototype
-	| function_declaration
+	| function_prototype { delete $<info>1; }
+	| function_definition
 	;
 
 structure_declaration
@@ -47,15 +47,15 @@ structure_declaration
 	| STRUCT IDENTIFIER '{' '}' { Cog::structureDefinition($<syntax>2); }
 	;
 
-function_declaration
+function_definition
 	: function_declaration '{' statement_list '}' { Cog::functionDefinition(); }
 	| function_declaration asm_block { Cog::asmFunctionDefinition(); }
 	| function_declaration '{' '}' { Cog::functionDefinition(); }
 	;
 
 function_prototype
-	: type_specifier IDENTIFIER '(' type_list ')' ';' { Cog::functionPrototype($<info>1, $<syntax>2, $<info>4); }
-	| type_specifier IDENTIFIER '(' ')' ';' { Cog::functionPrototype($<info>1, $<syntax>2, NULL); }
+	: type_specifier IDENTIFIER '(' declaration_list ')' ';' { $<info>$ = Cog::functionPrototype($<info>1, $<syntax>2); }
+	| type_specifier IDENTIFIER '(' ')' ';' { $<info>$ = Cog::functionPrototype($<info>1, $<syntax>2); }
 	;
 
 function_declaration

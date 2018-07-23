@@ -53,10 +53,17 @@ struct Compiler
 	std::list<BaseType> types;
 	std::vector<Scope> scopes;
 
+	BaseType *currFn;
+
 	void printScope();
 	Scope* getScope();
 	void pushScope();
 	void popScope();
+
+	BaseType *getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Declaration> &args);
+	BaseType *getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Symbol> &symbols);
+	BaseType *getStructure(std::string name, const std::vector<Declaration> &args);
+	BaseType *getStructure(std::string name, const std::vector<Symbol> &symbols);
 
 	void loadFile(std::string filename);
 	bool setTarget(std::string targetTriple = sys::getDefaultTargetTriple());	
