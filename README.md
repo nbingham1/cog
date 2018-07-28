@@ -96,6 +96,9 @@ However, variable assignment returns void and must be separate statements.
 <tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>yes</td></tr>
 <tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>yes</td></tr>
 <tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>yes</td></tr>
+<tr><td><code>a and=b;</code></td><td>inplace boolean AND</td><td>yes</td></tr>
+<tr><td><code>a xor=b;</code></td><td>inplace boolean XOR</td><td>yes</td></tr>
+<tr><td><code>a or=b;</code></td><td>inplace boolean OR</td><td>yes</td></tr>
 </table>
 
 The usual primitive types are supported with added support for fixed point numbers. Here, <n> represents the bitwidth of the type and <m> represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
