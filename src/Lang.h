@@ -6,6 +6,10 @@ namespace Cog
 {
 
 Info *getTypename(int token, char *txt);
+Info *getStaticArrayTypename(Info *name, Info *cnst);
+Info *getDynamicArrayTypename(Info *name);
+Info *getPointerTypename(Info *name);
+
 Info *getConstant(int token, char *txt);
 Info *getIdentifier(char *txt);
 
@@ -13,7 +17,10 @@ Info *unaryOperator(int op, Info *arg);
 Info *binaryOperator(Info *left, int op, Info *right);
 
 void declareSymbol(Info *type, char *name);
+void declareSymbols(Info *type, Info *names);
 void assignSymbol(Info *left, int op, Info *right);
+
+Info *variableDeclarationName(char *name, Info *expr);
 
 void structureDefinition(char *name);
 

@@ -52,7 +52,6 @@ Info *getTypename(int token, char *txt)
 	} else if (token == INT_PRIMITIVE && txt[0] == 'u') {
 		result->type = Typename::getUInt(atoi(txt+4));
 	} else if (token == INT_PRIMITIVE && txt[0] != 'u') {
-		unsigned int bitwidth = atoi(txt+3);
 		result->type = Typename::getInt(atoi(txt+3));
 	} else if (token == FIXED_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+6);
@@ -75,6 +74,32 @@ Info *getTypename(int token, char *txt)
 		delete result;
 		return NULL;
 	}
+}
+
+Info *getStaticArrayTypename(Info *name, Info *cnst)
+{
+	if (name)
+		delete name;
+	if (cnst)
+		delete cnst;
+
+	return NULL;
+}
+
+Info *getDynamicArrayTypename(Info *name)
+{
+	if (name)
+		delete name;
+
+	return NULL;
+}
+
+Info *getPointerTypename(Info *name)
+{
+	if (name)
+		delete name;
+
+	return NULL;
 }
 
 Info *getConstant(int64_t cnst)
@@ -316,6 +341,7 @@ void declareSymbol(Info *type, char *name)
 		}
 
 		cog.getScope()->createSymbol(name, type->type);
+
 		delete type;
 		delete name;
 	} else {
@@ -324,6 +350,39 @@ void declareSymbol(Info *type, char *name)
 			delete type;
 		if (name)
 			delete name;
+		// something is broken
+	}
+}
+
+
+void declareSymbols(Info *type, Info *names)
+{
+	if (type && names) {
+		Info *curr = names;
+		while (curr != NULL) {
+			printf("%s\n", curr->text.c_str());
+			if (cog.getScope()->findSymbol(curr->text) != NULL) {
+				error() << "variable '" << curr->text << "' already defined." << endl;
+			}
+
+			Symbol *symbol = cog.getScope()->createSymbol(curr->text, type->type);
+
+			if (curr->value) {
+				unaryTypecheck(curr, symbol->type);
+				symbol->setValue(curr->value);
+				curr->value->setName(symbol->name);
+			}
+			curr = curr->next;
+		}
+
+		delete type;
+		delete names;
+	} else {
+		error() << "here" << endl;
+		if (type)
+			delete type;
+		if (names)
+			delete names;
 		// something is broken
 	}
 }
@@ -369,6 +428,16 @@ void assignSymbol(Info *left, int op, Info *right)
 			delete right;
 		// something is broken
 	}
+}
+
+Info *variableDeclarationName(char *name, Info *expr)
+{
+	if (expr == NULL)
+		expr = new Info();
+
+	expr->text = name;
+	delete name;
+	return expr;
 }
 
 void structureDefinition(char *name)

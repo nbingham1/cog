@@ -167,15 +167,14 @@ int implicitCastDistance(const Typename &from, const Typename &to)
 
 		if ((fp->kind == PrimType::Signed || fp->kind == PrimType::Unsigned)
 		  && tp->kind == PrimType::Float) {
-			int expWidth = 0;
 			int expMin = 0;
 			int expMax = 0;
 			switch (tp->bitwidth) {
-			case 11: expWidth = 5; expMin = -15; expMax = 16; break;
-			case 24: expWidth = 8; expMin = -127; expMax = 128; break;
-			case 53: expWidth = 11; expMin = -1023; expMax = 1024; break;
-			case 64: expWidth = 15; expMin = -16383; expMax = 16384; break;
-			case 113: expWidth = 15; expMin = -16383; expMax = 16384; break;
+			case 11: expMin = -15; expMax = 16; break;
+			case 24: expMin = -127; expMax = 128; break;
+			case 53: expMin = -1023; expMax = 1024; break;
+			case 64: expMin = -16383; expMax = 16384; break;
+			case 113: expMin = -16383; expMax = 16384; break;
 			default: return -1;
 			}
 

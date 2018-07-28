@@ -55,12 +55,12 @@ function_definition
 	;
 
 function_prototype
-	: type_specifier IDENTIFIER '(' declaration_list ')' ';' { $<info>$ = Cog::functionPrototype($<info>1, $<syntax>2); }
+	: type_specifier IDENTIFIER '(' argument_declaration_list ')' ';' { $<info>$ = Cog::functionPrototype($<info>1, $<syntax>2); }
 	| type_specifier IDENTIFIER '(' ')' ';' { $<info>$ = Cog::functionPrototype($<info>1, $<syntax>2); }
 	;
 
 function_declaration
-	: type_specifier IDENTIFIER '(' declaration_list ')' { Cog::functionDeclaration($<info>1, $<syntax>2); }
+	: type_specifier IDENTIFIER '(' argument_declaration_list ')' { Cog::functionDeclaration($<info>1, $<syntax>2); }
 	| type_specifier IDENTIFIER '(' ')' { Cog::functionDeclaration($<info>1, $<syntax>2); }
 	;
 
@@ -123,13 +123,17 @@ declaration_block
 	| variable_declaration ';'
 	;
 
-declaration_list
-	: declaration_list ',' variable_declaration
-	| variable_declaration
+argument_declaration_list
+	: argument_declaration_list ',' argument_declaration
+	| argument_declaration
+	;
+
+argument_declaration
+	: type_specifier IDENTIFIER { Cog::declareSymbol($<info>1, $<syntax>2); }
 	;
 
 variable_declaration
-	: type_specifier IDENTIFIER { Cog::declareSymbol($<info>1, $<syntax>2); }
+	: type_specifier variable_declaration_name_list { Cog::declareSymbols($<info>1, $<info>2); }
 	;
 
 type_list
@@ -137,25 +141,40 @@ type_list
 	| type_specifier { $<info>$ = $<info>1; }
 	;
 
-assignment
-	: instance '=' expression { Cog::assignSymbol($<info>1, '=', $<info>3); }
-	| instance ASSIGN_MUL expression { Cog::assignSymbol($<info>1, ASSIGN_MUL, $<info>3); }
-	| instance ASSIGN_DIV expression { Cog::assignSymbol($<info>1, ASSIGN_DIV, $<info>3); }
-	| instance ASSIGN_REM expression { Cog::assignSymbol($<info>1, ASSIGN_REM, $<info>3); }
-	| instance ASSIGN_ADD expression { Cog::assignSymbol($<info>1, ASSIGN_ADD, $<info>3); }
-	| instance ASSIGN_SUB expression { Cog::assignSymbol($<info>1, ASSIGN_SUB, $<info>3); }
-	| instance ASSIGN_SHL expression { Cog::assignSymbol($<info>1, ASSIGN_SHL, $<info>3); }
-	| instance ASSIGN_ASHR expression { Cog::assignSymbol($<info>1, ASSIGN_ASHR, $<info>3); }
-	| instance ASSIGN_LSHR expression { Cog::assignSymbol($<info>1, ASSIGN_LSHR, $<info>3); }
-	| instance ASSIGN_ROL expression { Cog::assignSymbol($<info>1, ASSIGN_ROL, $<info>3); }
-	| instance ASSIGN_ROR expression { Cog::assignSymbol($<info>1, ASSIGN_ROR, $<info>3); }
-	| instance ASSIGN_AND expression { Cog::assignSymbol($<info>1, ASSIGN_AND, $<info>3); }
-	| instance ASSIGN_XOR expression { Cog::assignSymbol($<info>1, ASSIGN_XOR, $<info>3); }
-	| instance ASSIGN_OR expression { Cog::assignSymbol($<info>1, ASSIGN_OR, $<info>3); }
-	| instance ASSIGN_BAND expression { Cog::assignSymbol($<info>1, ASSIGN_BAND, $<info>3); }
-	| instance ASSIGN_BXOR expression { Cog::assignSymbol($<info>1, ASSIGN_BXOR, $<info>3); }
-	| instance ASSIGN_BOR expression { Cog::assignSymbol($<info>1, ASSIGN_BOR, $<info>3); }
+variable_declaration_name_list
+	: variable_declaration_name_list ',' variable_declaration_name { $<info>$ = Cog::infoList($<info>1, $<info>3); }
+	| variable_declaration_name { $<info>$ = $<info>1; }
 	;
+
+variable_declaration_name
+	: IDENTIFIER '=' expression { $<info>$ = Cog::variableDeclarationName($<syntax>1, $<info>3); }
+	| IDENTIFIER { $<info>$ = Cog::variableDeclarationName($<syntax>1, NULL); }
+	;
+
+assignment
+	: instance assign_op expression { Cog::assignSymbol($<info>1, $<token>2, $<info>3); }
+	;
+
+assign_op
+	: '=' { $<token>$ = '='; }
+	| ASSIGN_MUL { $<token>$ = ASSIGN_MUL; }
+	| ASSIGN_DIV { $<token>$ = ASSIGN_DIV; }
+	| ASSIGN_REM { $<token>$ = ASSIGN_REM; }
+	| ASSIGN_ADD { $<token>$ = ASSIGN_ADD; }
+	| ASSIGN_SUB { $<token>$ = ASSIGN_SUB; }
+	| ASSIGN_SHL { $<token>$ = ASSIGN_SHL; }
+	| ASSIGN_ASHR { $<token>$ = ASSIGN_ASHR; }
+	| ASSIGN_LSHR { $<token>$ = ASSIGN_LSHR; }
+	| ASSIGN_ROL { $<token>$ = ASSIGN_ROL; }
+	| ASSIGN_ROR { $<token>$ = ASSIGN_ROR; }
+	| ASSIGN_AND { $<token>$ = ASSIGN_AND; }
+	| ASSIGN_XOR { $<token>$ = ASSIGN_XOR; }
+	| ASSIGN_OR { $<token>$ = ASSIGN_OR; }
+	| ASSIGN_BAND { $<token>$ = ASSIGN_BAND; }
+	| ASSIGN_BXOR { $<token>$ = ASSIGN_BXOR; }
+	| ASSIGN_BOR { $<token>$ = ASSIGN_BOR; }
+	;
+
 
 asm_block
 	: ASM '{' asm_statement_list '}' { Cog::asmBlock($<info>3); }
@@ -333,7 +352,10 @@ instance
 	;
 
 type_specifier
-	: VOID_PRIMITIVE { $<info>$ = Cog::getTypename(VOID_PRIMITIVE, $<syntax>1); }
+	: type_specifier '[' constant ']' { $<info>$ = Cog::getStaticArrayTypename($<info>1, $<info>3); }
+	| type_specifier '[' ']' { $<info>$ = Cog::getDynamicArrayTypename($<info>1); }
+	| type_specifier '*' { $<info>$ = Cog::getPointerTypename($<info>1); }
+	| VOID_PRIMITIVE { $<info>$ = Cog::getTypename(VOID_PRIMITIVE, $<syntax>1); }
 	| BOOL_PRIMITIVE { $<info>$ = Cog::getTypename(BOOL_PRIMITIVE, $<syntax>1); }
 	| INT_PRIMITIVE { $<info>$ = Cog::getTypename(INT_PRIMITIVE, $<syntax>1); }
 	| FLOAT_PRIMITIVE { $<info>$ = Cog::getTypename(FLOAT_PRIMITIVE, $<syntax>1); }
