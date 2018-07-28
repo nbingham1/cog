@@ -32,7 +32,7 @@ llvm::Value *fn_abs(llvm::Value *v0)
  * ashr -> and -> add -> ashr
  * (cmplz, add) -> cmov -> ashr 
  */
-llvm::Value *fn_roundedAShr(llvm::Value *v0, int shift)
+llvm::Value *fn_div2(llvm::Value *v0, int shift)
 {
 	int mask = ((1 << shift)-1);
 

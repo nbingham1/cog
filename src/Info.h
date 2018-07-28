@@ -34,6 +34,14 @@ struct Typename
 
 	void setPrimType(llvm::Type *llvmType, int kind, int bitwidth = 0, int exponent = 0, int pointerCount = 0);
 
+	static Typename getVoid();
+	static Typename getBool();
+	static Typename getInt(int bitwidth);
+	static Typename getUInt(int bitwidth);
+	static Typename getFloat(int bitwidth);
+	static Typename getFixed(int bitwidth, int exponent);
+	static Typename getUFixed(int bitwidth, int exponent);
+
 	Typename &operator=(const Typename &copy);
 };
 
@@ -111,7 +119,7 @@ bool operator!=(const BaseType &t1, const BaseType &t2);
 
 struct BaseValue
 {
-	llvm::Value *value;
+	llvm::Value *prim;
 	llvm::AllocaInst *inst;
 };
 

@@ -13,7 +13,7 @@ namespace Cog
 {
 
 llvm::Value *fn_abs(llvm::Value *v0);
-llvm::Value *fn_roundedAShr(llvm::Value *v0, int shift);
+llvm::Value *fn_div2(llvm::Value *v0, int shift);
 
 }
 

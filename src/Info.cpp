@@ -1,7 +1,10 @@
 #include "Info.h"
+#include "Compiler.h"
 
 #include <llvm/IR/Constants.h>
 #include <sstream>
+
+extern Cog::Compiler cog;
 
 namespace Cog
 {
@@ -28,6 +31,73 @@ Typename::~Typename()
 	if (prim)
 		delete prim;
 	prim = NULL;
+}
+
+Typename Typename::getVoid()
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getVoidTy(cog.context), PrimType::Void);
+	return result;
+}
+
+Typename Typename::getBool()
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getInt1Ty(cog.context), PrimType::Boolean);
+	return result;
+}
+
+Typename Typename::getInt(int bitwidth)
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getIntNTy(cog.context, bitwidth), PrimType::Signed, bitwidth);
+	return result;
+}
+
+Typename Typename::getUInt(int bitwidth)
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getIntNTy(cog.context, bitwidth), PrimType::Unsigned, bitwidth);
+	return result;
+}
+
+Typename Typename::getFloat(int bitwidth)
+{
+	Typename result;
+	switch (bitwidth) {
+	case 16:
+		result.setPrimType(Type::getHalfTy(cog.context), PrimType::Float, 11);
+		break;
+	case 32:
+		result.setPrimType(Type::getFloatTy(cog.context), PrimType::Float, 24);
+		break;
+	case 64:
+		result.setPrimType(Type::getDoubleTy(cog.context), PrimType::Float, 53);
+		break;
+	//case 80:
+	//	result.setPrimType(Type::getFP80Ty(cog.context), PrimType::Float, 64);
+	//	break;
+	case 128:
+		result.setPrimType(Type::getFP128Ty(cog.context), PrimType::Float, 113);
+		break;
+	default:
+		error() << "floating point types must be 16, 32, 64, or 128 bits." << std::endl;
+	}
+	return result;
+}
+
+Typename Typename::getFixed(int bitwidth, int exponent)
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getIntNTy(cog.context, bitwidth), PrimType::Signed, bitwidth, exponent);
+	return result;
+}
+
+Typename Typename::getUFixed(int bitwidth, int exponent)
+{
+	Typename result;
+	result.setPrimType(llvm::Type::getIntNTy(cog.context, bitwidth), PrimType::Unsigned, bitwidth, exponent);
+	return result;
 }
 
 llvm::Type *Typename::getLlvm() const

@@ -3,6 +3,10 @@
 
 using namespace std;
 
+extern int line;
+extern int column;
+extern const char *str;
+
 namespace Cog
 {
 
@@ -210,6 +214,13 @@ bool Compiler::emit(TargetMachine::CodeGenFileType fileType)
   outs() << "Wrote " << filename << "\n";
 
   return true;
+}
+
+std::ostream &error_(const char *dfile, int dline)
+{
+	cout << str << endl;
+	cout << dfile << ":" << dline << " error " << line << ":" << column << ": ";
+	return cout;
 }
 
 }

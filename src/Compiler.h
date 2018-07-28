@@ -29,6 +29,7 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include "Info.h"
 
@@ -71,5 +72,9 @@ struct Compiler
 	
 	bool emit(TargetMachine::CodeGenFileType fileType = TargetMachine::CGFT_ObjectFile);
 };
+
+
+std::ostream &error_(const char *dfile, int dline);
+#define error() error_(__FILE__, __LINE__)
 
 }

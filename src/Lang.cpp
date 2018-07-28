@@ -1,6 +1,7 @@
 #include "Lang.h"
 #include "Compiler.h"
 #include "Intrinsic.h"
+#include "Expression.h"
 #include "Parser.y.h"
 
 #include <stdio.h>
@@ -10,23 +11,11 @@
 #include <llvm/ADT/Twine.h>
 
 extern Cog::Compiler cog;
-extern int line;
-extern int column;
-extern const char *str;
 
 using std::endl;
 
 namespace Cog
 {
-
-std::ostream &error_(const char *dfile, int dline)
-{
-	std::cout << str << endl;
-	std::cout << dfile << ":" << dline << " error " << line << ":" << column << ": ";
-	return std::cout;
-}
-
-#define error() error_(__FILE__, __LINE__)
 
 APInt APInt_pow(APInt base, unsigned int exp)
 {
@@ -57,57 +46,35 @@ Info *getTypename(int token, char *txt)
 	// TODO interface types
 	Info *result = new Info();
 	if (token == VOID_PRIMITIVE) {
-		result->type.setPrimType(Type::getVoidTy(cog.context), PrimType::Void); 
-		return result;
+		result->type = Typename::getVoid();
 	} else if (token == BOOL_PRIMITIVE) {
-		result->type.setPrimType(Type::getInt1Ty(cog.context), PrimType::Boolean);
-		return result;
+		result->type = Typename::getBool();
 	} else if (token == INT_PRIMITIVE && txt[0] == 'u') {
-		unsigned int bitwidth = atoi(txt+4);
-		result->type.setPrimType(Type::getIntNTy(cog.context, bitwidth), PrimType::Unsigned, bitwidth);
-		return result;
+		result->type = Typename::getUInt(atoi(txt+4));
 	} else if (token == INT_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+3);
-		result->type.setPrimType(Type::getIntNTy(cog.context, bitwidth), PrimType::Signed, bitwidth);
-		return result;
+		result->type = Typename::getInt(atoi(txt+3));
 	} else if (token == FIXED_PRIMITIVE && txt[0] == 'u') {
 		unsigned int bitwidth = atoi(txt+6);
-		result->type.setPrimType(Type::getIntNTy(cog.context, bitwidth), PrimType::Unsigned, bitwidth, bitwidth/4);
-		return result;
+		result->type = Typename::getUFixed(bitwidth, bitwidth/4);
 	} else if (token == FIXED_PRIMITIVE && txt[0] != 'u') {
 		unsigned int bitwidth = atoi(txt+5);
-		result->type.setPrimType(Type::getIntNTy(cog.context, bitwidth), PrimType::Signed, bitwidth, bitwidth/4);;
-		return result;
+		result->type = Typename::getFixed(bitwidth, bitwidth/4);
 	} else if (token == FLOAT_PRIMITIVE) {
-		unsigned int bitwidth = atof(txt+5);
-		switch (bitwidth) {
-		case 16:
-			result->type.setPrimType(Type::getHalfTy(cog.context), PrimType::Float, 11);
-			return result;
-		case 32:
-			result->type.setPrimType(Type::getFloatTy(cog.context), PrimType::Float, 24);
-			return result;
-		case 64:
-			result->type.setPrimType(Type::getDoubleTy(cog.context), PrimType::Float, 53);
-			return result;
-		//case 80:
-		//	result->type.setPrimType(Type::getFP80Ty(cog.context), PrimType::Float, 64);
-		//	return result;
-		case 128:
-			result->type.setPrimType(Type::getFP128Ty(cog.context), PrimType::Float, 113);
-			return result;
-		default:
-			error() << "floating point types must be 16, 32, 64, or 128 bits." << endl;
-		}
+		result->type = Typename::getFloat(atoi(txt+5));
 	} else if (token == IDENTIFIER) {
 	
 	} else {
 		error() << "undefined type." << endl;
 	}
 
-	delete result;
 	delete txt;
-	return NULL;
+	if (result->type.isSet())
+		return result;
+	else {
+		delete result;
+		return NULL;
+	}
 }
 
 Info *getConstant(int64_t cnst)
@@ -120,12 +87,11 @@ Info *getConstant(int64_t cnst)
 	value = value.trunc(value.ceilLogBase2());
 	int exponent = valueShift;
 
-	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
-	result->type.setPrimType(
-		result->value->getType(),
-		cnst < 0 ? PrimType::Signed : PrimType::Unsigned,
-		value.getBitWidth(),
-		exponent);
+	if (cnst < 0)
+		result->type = Typename::getFixed(value.getBitWidth(), exponent);
+	else
+		result->type = Typename::getUFixed(value.getBitWidth(), exponent);
+	result->value = ConstantInt::get(result->type.getLlvm(), value);
 	
 	return result;
 }
@@ -149,12 +115,13 @@ Info *getConstant(int token, char *txt)
 	
 	switch (token) {
 	case BOOL_CONSTANT:
+		result->type = Typename::getBool();
 		if (*curr == 't' || *curr == 'T' || *curr == 'y' || *curr == 'Y' || *curr == '1')
-			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 1);
+			result->value = ConstantInt::get(result->type.getLlvm(), 1);
 		else
-			result->value = ConstantInt::get(Type::getInt1Ty(cog.context), 0);
-		result->type.setPrimType(result->value->getType(), PrimType::Boolean);
-		break;
+			result->value = ConstantInt::get(result->type.getLlvm(), 0);
+		delete txt;
+		return result;
 	case HEX_CONSTANT:
 		radix = 16;
 		curr += 2;
@@ -183,7 +150,8 @@ Info *getConstant(int token, char *txt)
 	default:
 		error() << "unrecognized constant token." << endl;
 		delete txt;
-		return result;
+		delete result;
+		return NULL;
 	}
 	
 	int bitwidth = APInt::getBitsNeeded(valueStr, radix);
@@ -227,12 +195,11 @@ Info *getConstant(int token, char *txt)
 		value = -value;
 	exponent += valueShift;
 
-	result->value = ConstantInt::get(Type::getIntNTy(cog.context, value.getBitWidth()), value);
-	result->type.setPrimType(
-		result->value->getType(),
-		isNegative ? PrimType::Signed : PrimType::Unsigned,
-		value.getBitWidth(),
-		exponent);
+	if (isNegative)
+		result->type = Typename::getFixed(value.getBitWidth(), exponent);
+	else
+		result->type = Typename::getUFixed(value.getBitWidth(), exponent);
+	result->value = ConstantInt::get(result->type.getLlvm(), value);
 
 	//printf("%s: %s\n", result->type.getName().c_str(), value.toString(10, false).c_str());
 	
@@ -257,297 +224,9 @@ Info *getIdentifier(char *txt)
 	return NULL;
 }
 
-llvm::Value *castType(llvm::Value* value, Typename from, Typename to)
-{
-	llvm::Type *ft = from.getLlvm();
-	llvm::Type *tt = to.getLlvm();
-
-	if (ft == NULL || ft->isLabelTy()
-	 || ft->isMetadataTy() || ft->isTokenTy()) {
-		error() << "found non-valid type '" << from.getName() << "'." << endl;
-	} else if (tt == NULL || tt->isLabelTy()
-	 || tt->isMetadataTy() || tt->isTokenTy()) {
-		error() << "found non-valid type '" << from.getName() << "'." << endl;
-	} else if (ft != tt && (
-	    ft->isStructTy()		|| tt->isStructTy()
-	 || ft->isFunctionTy()	|| tt->isFunctionTy()
-	 || ft->isArrayTy()			|| tt->isArrayTy()
-	 || ft->isPointerTy()		|| tt->isPointerTy()
-	 || ft->isVectorTy()		|| tt->isVectorTy())) {
-		error() << "typecast '" << from.getName() << "' to '" << to.getName() << "' not yet supported." << endl;
-	} else if (from.prim && to.prim) {
-		PrimType *fp = from.prim;
-		PrimType *tp = to.prim;
-	
-		if ((fp->kind == PrimType::Void
-		  || tp->kind == PrimType::Void)
-		  && fp->kind != tp->kind) {
-			error() << "void not castable" << endl;
-		} else if (fp->kind == PrimType::Float && tp->kind == PrimType::Float) {
-			if (fp->bitwidth < tp->bitwidth) {
-				value = cog.builder.CreateFPExt(value, tt);
-			} else if (fp->bitwidth > tp->bitwidth) {
-				value = cog.builder.CreateFPTrunc(value, tt);
-			}
-		} else if (ft->isIntegerTy() && tt->isFloatingPointTy()) {
-			if (fp->kind == PrimType::Boolean) {
-				value = cog.builder.CreateSelect(value, ConstantFP::get(tt, 0.0), ConstantFP::getNaN(tt));
-			} else {
-				if (fp->kind == PrimType::Unsigned)
-					value = cog.builder.CreateUIToFP(value, tt);
-				else
-					value = cog.builder.CreateSIToFP(value, tt);
-
-				if (fp->exponent != 0)
-					value = cog.builder.CreateFMul(value, ConstantFP::get(tt, pow(2.0, (double)fp->exponent)));
-			}
-		} else if (ft->isFloatingPointTy() && tt->isIntegerTy()) {
-			if (tp->kind == PrimType::Boolean) {
-				value = cog.builder.CreateFCmpORD(value, value);
-			} else {
-				if (tp->exponent != 0)
-					value = cog.builder.CreateFMul(value, ConstantFP::get(ft, pow(2.0, (double)tp->exponent)));
-
-				if (tp->kind == PrimType::Unsigned)
-					value = cog.builder.CreateFPToUI(value, tt);
-				else
-					value = cog.builder.CreateFPToSI(value, tt);
-			}
-		} else if (ft->isIntegerTy() && tt->isIntegerTy()) {
-			if (fp->kind != PrimType::Boolean && tp->kind != PrimType::Boolean) {
-				if (fp->kind == PrimType::Signed && tp->kind == PrimType::Unsigned) {
-					value = fn_abs(value);
-					fp->kind = PrimType::Unsigned;
-				}
-
-				if (fp->bitwidth < tp->bitwidth) {
-					if (fp->kind == PrimType::Unsigned)
-						value = cog.builder.CreateZExt(value, tt);
-					else
-						value = cog.builder.CreateSExt(value, tt);
-					fp->bitwidth = tp->bitwidth;
-					ft = tt;
-					fp->llvmType = tt;
-				}
-
-				if (fp->exponent > tp->exponent) {
-					value = cog.builder.CreateShl(value, fp->exponent - fp->exponent);
-				} else if (fp->exponent < tp->exponent) {
-					if (fp->kind == PrimType::Unsigned)
-						value = cog.builder.CreateLShr(value, tp->exponent - fp->exponent);	
-					else
-						value = fn_roundedAShr(value, tp->exponent - fp->exponent);
-				}
-				fp->exponent = tp->exponent;
-
-				if (fp->bitwidth > tp->bitwidth) {
-					value = cog.builder.CreateTrunc(value, tt);
-					fp->bitwidth = tp->bitwidth;
-					ft = tt;
-					fp->llvmType = tt;
-				}
-
-				fp->kind = tp->kind;
-			}
-		}
-	}
-
-	return value;
-}
-
-Info *castType(Info *from, const Typename &to)
-{
-	from->value = castType(from->value, from->type, to);
-	from->symbol = NULL;
-	from->type = to;
-
-	return from;
-}
-
-int implicitCastDistance(const Typename &from, const Typename &to)
-{
-	// This is a measure of the number of precision bits lost
-	if (from.prim && to.prim) {
-		PrimType *fp = from.prim;
-		PrimType *tp = to.prim;
-
-		if (fp->kind == PrimType::Void || tp->kind == PrimType::Void)
-			return -1;
-
-		// do not implicitly cast signed to unsigned values
-		if (fp->kind == PrimType::Signed && tp->kind == PrimType::Unsigned)
-			return -1;
-		// float cannot cast to fixed
-		else if (fp->kind == PrimType::Float
-		     && (tp->kind == PrimType::Signed || tp->kind == PrimType::Unsigned))
-			return -1;
-
-		int widthDiff = tp->bitwidth - fp->bitwidth;
-
-		// make space for from's implicit sign bit
-		if (fp->kind == PrimType::Unsigned && tp->kind == PrimType::Signed)
-			--widthDiff;
-
-		if ((fp->kind == PrimType::Signed && tp->kind == PrimType::Signed) ||
-		    (fp->kind == PrimType::Unsigned &&
-				(tp->kind == PrimType::Signed || tp->kind == PrimType::Unsigned))) {
-			int expDiff = tp->exponent - fp->exponent;
-			
-			// We'll loose significant bits, no can do
-			if (widthDiff + expDiff < 0)
-				return -1;
-			// we'll loose precision
-			else if (expDiff > 0)
-				return expDiff;
-			// otherwise, no data is lost
-			else
-				return 0;
-		}
-
-		if (fp->kind == PrimType::Float && tp->kind == PrimType::Float) {
-			if (fp->bitwidth < tp->bitwidth)
-				return 0;
-			// losing precision is fine, but we can't guarantee the exponent
-			else
-				return -1;
-		}
-
-		if ((fp->kind == PrimType::Signed || fp->kind == PrimType::Unsigned)
-		  && tp->kind == PrimType::Float) {
-			int expWidth = 0;
-			int expMin = 0;
-			int expMax = 0;
-			switch (tp->bitwidth) {
-			case 11: expWidth = 5; expMin = -15; expMax = 16; break;
-			case 24: expWidth = 8; expMin = -127; expMax = 128; break;
-			case 53: expWidth = 11; expMin = -1023; expMax = 1024; break;
-			case 64: expWidth = 15; expMin = -16383; expMax = 16384; break;
-			case 113: expWidth = 15; expMin = -16383; expMax = 16384; break;
-			default: return -1;
-			}
-
-			// this is an estimate. It should be divided by
-			// log(10)/log(2) which is about 3.3 but since I'm
-			// checking bounds, I don't really want to convert
-			// to float.
-			int exp10 = (fp->exponent + fp->bitwidth) >> 2;
-
-			// exponent will overflow
-			if (exp10 < expMin || exp10 > expMax)
-				return -1;
-			// loss in precision
-			else if (widthDiff < 0)
-				return -widthDiff;
-			else
-				return 0;
-		}
-
-		return -1;
-	} else if (from.prim && to.base) {
-		return -1;
-	} else if (from.base && to.prim) {
-		return -1;
-	} else if (from.base && to.base) {
-		BaseType *fb = from.base;
-		BaseType *tb = to.base;
-
-		if (fb->args.size() != tb->args.size())
-			return -1;
-
-		if (fb->thisType != tb->thisType)
-			return -1;
-
-		if (fb->name != tb->name)
-			return -1;
-
-		int castDist = 0;
-		int tempDist = 0;
-
-		for (int i = 0; i < (int)fb->args.size(); i++) {
-			tempDist = implicitCastDistance(fb->args[i].type, tb->args[i].type);
-			if (tempDist < 0)
-				return -1;
-			else
-				castDist += tempDist;
-		}
-
-		return castDist;
-	} else {
-		error() << "invalid types '" << from.getName() << "' and '" << to.getName() << "'" << endl;
-		return -1;
-	}
-}
-
-void unaryTypecheck(Info *arg, const Typename &expect)
-{
-	llvm::Type *at = arg->type.getLlvm();
-
-	if (at == NULL || at->isVoidTy() || at->isLabelTy()
-	 || at->isMetadataTy() || at->isTokenTy()) {
-		error() << "foun non-valid type '" << arg->type.getName() << "'." << endl;
-	} else if (arg->type != expect && (
-			at->isStructTy()
-	 || at->isFunctionTy()
-	 || at->isArrayTy()
-	 || at->isPointerTy()
-	 || at->isVectorTy())) {
-		error() << "type promotion '" << arg->type.getName() << "' to '" << expect.getName() << "' not yet supported." << endl;
-	} else {
-		if (implicitCastDistance(arg->type, expect) >= 0)
-			castType(arg, expect);
-		else if (arg->type != expect)
-			error() << "unable to cast '" << arg->type.getName() << "' to '" << expect.getName() << "'." << endl;
-	}
-}
-
-void binaryTypecheck(Info *left, Info *right, Typename *expect)
-{
-	llvm::Type *lt = left->type.getLlvm();
-	llvm::Type *rt = right->type.getLlvm();
-
-	if (lt == NULL || lt->isVoidTy() || lt->isLabelTy()
-	 || lt->isMetadataTy() || lt->isTokenTy()) {
-		error() << "found non-valid type '" << left->type.getName() << "'." << endl;
-	} else if (rt == NULL || rt->isVoidTy() || rt->isLabelTy()
-	 || rt->isMetadataTy() || rt->isTokenTy()) {
-		error() << "found non-valid type '" << right->type.getName() << "'." << endl;
-	} else if (lt != rt && (
-	    lt->isStructTy()		|| rt->isStructTy()
-	 || lt->isFunctionTy()	|| rt->isFunctionTy()
-	 || lt->isArrayTy()			|| rt->isArrayTy()
-	 || lt->isPointerTy()		|| rt->isPointerTy()
-	 || lt->isVectorTy()		|| rt->isVectorTy())) {
-		error() << "type promotion '" << left->type.getName() << "', '" << right->type.getName() << "' not yet supported." << endl;
-	} else if (expect == NULL) {
-		int ltor = implicitCastDistance(left->type, right->type);
-		int rtol = implicitCastDistance(right->type, left->type);
-
-		if (ltor >= 0 && (rtol < 0 || ltor <= rtol))
-			castType(left, right->type);
-		else if (rtol >= 0 && (ltor < 0 || rtol <= ltor))
-			castType(right, left->type);
-
-		if (left->type != right->type)
-			error() << "type mismatch '" << left->type.getName() << "' != '" << right->type.getName() << "'." << endl;
-	} else {
-		if (implicitCastDistance(left->type, *expect) >= 0)
-			castType(left, *expect);
-		else
-			error() << "unable to cast '" << left->type.getName() << "' to '" << expect->getName() << "'." << endl;
-	
-		if (implicitCastDistance(right->type, *expect) >= 0)
-			castType(right, *expect);
-		else
-			error() << "unable to cast '" << right->type.getName() << "' to '" << expect->getName() << "'." << endl;
-	}
-}
-
 Info *unaryOperator(int op, Info *arg)
 {
 	if (arg != NULL) {
-		Typename booleanType;
-		booleanType.setPrimType(Type::getInt1Ty(cog.context), PrimType::Boolean);
-
 		if (arg->type.prim) {
 			switch (op) {
 				case '-':
@@ -558,7 +237,7 @@ Info *unaryOperator(int op, Info *arg)
 					arg->value = cog.builder.CreateNot(arg->value);
 					break;
 				case NOT:
-					unaryTypecheck(arg, booleanType);
+					unaryTypecheck(arg, Typename::getBool());
 					arg->value = cog.builder.CreateNot(arg->value);
 					break;
 				default:
@@ -586,168 +265,30 @@ Info *unaryOperator(int op, Info *arg)
 Info *binaryOperator(Info *left, int op, Info *right)
 {
 	if (left && right) {
-		Value *width = NULL;
-		Value *inv = NULL;
-		Value *lsb = NULL;
-		Value *msb = NULL;
-
-		Typename booleanType;
-		booleanType.setPrimType(Type::getInt1Ty(cog.context), PrimType::Boolean);
-
 		if (left->type.prim && right->type.prim) {
-			PrimType *lp = left->type.prim;
-			PrimType *rp = right->type.prim;
-			llvm::Type *lt = lp->llvmType;
-			llvm::Type *rt = rp->llvmType;
-
 			switch (op) {
-			case OR:
-				binaryTypecheck(left, right, &booleanType);
-				left->value = cog.builder.CreateOr(left->value, right->value);
-				break;
-			case XOR:
-				binaryTypecheck(left, right, &booleanType);
-				left->value = cog.builder.CreateXor(left->value, right->value);
-				break;
-			case AND:
-				binaryTypecheck(left, right, &booleanType);
-				left->value = cog.builder.CreateAnd(left->value, right->value);
-				break;
-			case '<':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpOLT(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateICmpULT(left->value, right->value);
-				else
-					left->value = cog.builder.CreateICmpSLT(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case '>':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpOGT(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateICmpUGT(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateICmpSGT(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case LE:
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpOLE(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateICmpULE(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateICmpSLE(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case GE:
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpOGE(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateICmpUGE(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateICmpSGE(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case EQ:
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpOEQ(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateICmpEQ(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case NE:
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFCmpUNE(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateICmpNE(left->value, right->value);
-				left->type = booleanType;
-				break;
-			case '|':
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateOr(left->value, right->value);
-				break;
-			case '^':
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateXor(left->value, right->value);
-				break;
-			case '&':
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateAnd(left->value, right->value);
-				break;
-			case SHL:
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateShl(left->value, right->value);
-				break;
-			case ASHR:
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateAShr(left->value, right->value);
-				break;
-			case LSHR:
-				binaryTypecheck(left, right);
-				left->value = cog.builder.CreateLShr(left->value, right->value);
-				break;
-			case ROR:
-				binaryTypecheck(left, right);
-				width = ConstantInt::get(lt, lt->getIntegerBitWidth());
-				inv = cog.builder.CreateSub(width, right->value);
-				lsb = cog.builder.CreateLShr(left->value, right->value);
-				msb = cog.builder.CreateShl(left->value, inv);
-				left->value = cog.builder.CreateOr(msb, lsb);
-				break;
-			case ROL:
-				binaryTypecheck(left, right);
-				width = ConstantInt::get(lt, lt->getIntegerBitWidth());
-				inv = cog.builder.CreateSub(width, right->value);
-				lsb = cog.builder.CreateLShr(left->value, inv);
-				msb = cog.builder.CreateShl(left->value, right->value);
-				left->value = cog.builder.CreateOr(msb, lsb);
-				break;
-			case '+':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFAdd(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateAdd(left->value, right->value);
-				break;
-			case '-':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFSub(left->value, right->value);
-				else 
-					left->value = cog.builder.CreateSub(left->value, right->value);
-				break;
-			case '*':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFMul(left->value, right->value);
-				else
-					left->value = cog.builder.CreateMul(left->value, right->value);
-				break;
-			case '/':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFDiv(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateUDiv(left->value, right->value);
-				else
-					left->value = cog.builder.CreateSDiv(left->value, right->value);
-				break;
-			case '%':
-				binaryTypecheck(left, right);
-				if (lt->isFloatingPointTy())
-					left->value = cog.builder.CreateFRem(left->value, right->value);
-				else if (lp->kind == PrimType::Unsigned)
-					left->value = cog.builder.CreateURem(left->value, right->value);
-				else
-					left->value = cog.builder.CreateSRem(left->value, right->value);
-				break;
+			case OR:   getBooleanOr(left, right); break;
+			case XOR:  getBooleanXor(left, right); break;
+			case AND:  getBooleanAnd(left, right); break;
+			case '<':  getCmpLT(left, right); break;
+			case '>':  getCmpGT(left, right); break;
+			case LE:   getCmpLE(left, right); break;
+			case GE:   getCmpGE(left, right); break;
+			case EQ:   getCmpEQ(left, right); break;
+			case NE:   getCmpNE(left, right); break;
+			case '|':  getBitwiseOr(left, right); break;
+			case '^':  getBitwiseXor(left, right); break;
+			case '&':  getBitwiseAnd(left, right); break;
+			case SHL:  getShl(left, right); break;
+			case ASHR: getAshr(left, right); break;
+			case LSHR: getLshr(left, right); break;
+			case ROR:  getRor(left, right); break;
+			case ROL:  getRol(left, right); break;
+			case '+':  getAdd(left, right); break;
+			case '-':  getSub(left, right); break;
+			case '*':  getMult(left, right); break;
+			case '/':  getDiv(left, right); break;
+			case '%':  getRem(left, right); break;
 			default:
 				error() << "unrecognized binary operator '" << (char)op << "'." << endl;
 				delete left;
@@ -755,7 +296,6 @@ Info *binaryOperator(Info *left, int op, Info *right)
 				return NULL;
 			}
 		}
-		left->symbol = NULL;
 		delete right;
 		return left;
 	} else {
@@ -788,18 +328,45 @@ void declareSymbol(Info *type, char *name)
 	}
 }
 
-void assignSymbol(Info *symbol, Info *value)
+void assignSymbol(Info *left, int op, Info *right)
 {
-	if (symbol && value) {
-		unaryTypecheck(value, symbol->type);
-		symbol->symbol->setValue(value->value);
-		value->value->setName(symbol->symbol->name + "_");
+	if (left && right) {
+		Symbol *symbol = left->symbol;
+
+		switch (op) {
+		case '=': break;
+		case ASSIGN_MUL: getMult(left, right); break;
+		case ASSIGN_DIV: getDiv(left, right); break;
+		case ASSIGN_REM: getRem(left, right); break;
+		case ASSIGN_ADD: getAdd(left, right); break;
+		case ASSIGN_SUB: getSub(left, right); break;
+		case ASSIGN_SHL: getShl(left, right); break;
+		case ASSIGN_ASHR: getAshr(left, right); break;
+		case ASSIGN_LSHR: getLshr(left, right); break;
+		case ASSIGN_ROL: getRol(left, right); break;
+		case ASSIGN_ROR: getRor(left, right); break;
+		case ASSIGN_AND: getBitwiseAnd(left, right); break;
+		case ASSIGN_XOR: getBitwiseXor(left, right); break;
+		case ASSIGN_OR: getBitwiseOr(left, right); break;
+		case ASSIGN_BAND: getBooleanAnd(left, right); break;
+		case ASSIGN_BXOR: getBooleanXor(left, right); break;
+		case ASSIGN_BOR: getBooleanOr(left, right); break;
+		}
+
+		unaryTypecheck(left, symbol->type);
+		symbol->setValue(left->value);
+		left->value->setName(symbol->name);
+
+		if (left)
+			delete left;
+		if (right)
+			delete right;
 	} else {
 		error() << "here" << endl;
-		if (symbol)
-			delete symbol;
-		if (value)
-			delete value;
+		if (left)
+			delete left;
+		if (right)
+			delete right;
 		// something is broken
 	}
 }
@@ -992,10 +559,7 @@ void ifCondition(Info *cond)
 	cog.getScope()->appendBlock(thenBlock);
 	cog.getScope()->appendBlock(elseBlock);
 
-	Typename booleanType;
-	booleanType.setPrimType(Type::getInt1Ty(cog.context), PrimType::Boolean);
-
-	unaryTypecheck(cond, booleanType);
+	unaryTypecheck(cond, Typename::getBool());
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->popBlock();
@@ -1081,10 +645,7 @@ void whileCondition(Info *cond)
 	cog.getScope()->appendBlock(thenBlock);
 	cog.getScope()->appendBlock(elseBlock);
 
-	Typename booleanType;
-	booleanType.setPrimType(Type::getInt1Ty(cog.context), PrimType::Boolean);
-
-	unaryTypecheck(cond, booleanType);
+	unaryTypecheck(cond, Typename::getBool());
 
 	cog.builder.CreateCondBr(cond->value, thenBlock, elseBlock);
 	cog.getScope()->nextBlock();

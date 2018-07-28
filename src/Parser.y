@@ -19,6 +19,7 @@ extern const char* str;
 %token ASM STRUCT IF ELSE WHILE RETURN AND XOR OR NOT
 %token LE GE NE EQ SHL ASHR LSHR ROL ROR
 %token ASM_REGISTER ASM_CONSTANT ASM_DIRECTIVE ASM_LABEL
+%token ASSIGN_MUL ASSIGN_DIV ASSIGN_REM ASSIGN_ADD ASSIGN_SUB ASSIGN_SHL ASSIGN_ASHR ASSIGN_LSHR ASSIGN_ROL ASSIGN_ROR ASSIGN_BAND ASSIGN_BXOR ASSIGN_BOR ASSIGN_AND ASSIGN_OR ASSIGN_XOR
 %left '+' '-'
 %left '*' '/' '%'
 %union {
@@ -137,7 +138,23 @@ type_list
 	;
 
 assignment
-	: instance '=' expression { Cog::assignSymbol($<info>1, $<info>3); }
+	: instance '=' expression { Cog::assignSymbol($<info>1, '=', $<info>3); }
+	| instance ASSIGN_MUL expression { Cog::assignSymbol($<info>1, ASSIGN_MUL, $<info>3); }
+	| instance ASSIGN_DIV expression { Cog::assignSymbol($<info>1, ASSIGN_DIV, $<info>3); }
+	| instance ASSIGN_REM expression { Cog::assignSymbol($<info>1, ASSIGN_REM, $<info>3); }
+	| instance ASSIGN_ADD expression { Cog::assignSymbol($<info>1, ASSIGN_ADD, $<info>3); }
+	| instance ASSIGN_SUB expression { Cog::assignSymbol($<info>1, ASSIGN_SUB, $<info>3); }
+	| instance ASSIGN_SHL expression { Cog::assignSymbol($<info>1, ASSIGN_SHL, $<info>3); }
+	| instance ASSIGN_ASHR expression { Cog::assignSymbol($<info>1, ASSIGN_ASHR, $<info>3); }
+	| instance ASSIGN_LSHR expression { Cog::assignSymbol($<info>1, ASSIGN_LSHR, $<info>3); }
+	| instance ASSIGN_ROL expression { Cog::assignSymbol($<info>1, ASSIGN_ROL, $<info>3); }
+	| instance ASSIGN_ROR expression { Cog::assignSymbol($<info>1, ASSIGN_ROR, $<info>3); }
+	| instance ASSIGN_AND expression { Cog::assignSymbol($<info>1, ASSIGN_AND, $<info>3); }
+	| instance ASSIGN_XOR expression { Cog::assignSymbol($<info>1, ASSIGN_XOR, $<info>3); }
+	| instance ASSIGN_OR expression { Cog::assignSymbol($<info>1, ASSIGN_OR, $<info>3); }
+	| instance ASSIGN_BAND expression { Cog::assignSymbol($<info>1, ASSIGN_BAND, $<info>3); }
+	| instance ASSIGN_BXOR expression { Cog::assignSymbol($<info>1, ASSIGN_BXOR, $<info>3); }
+	| instance ASSIGN_BOR expression { Cog::assignSymbol($<info>1, ASSIGN_BOR, $<info>3); }
 	;
 
 asm_block

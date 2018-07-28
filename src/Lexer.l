@@ -2,6 +2,7 @@
 #include "Parser.y.h"
 
 void yyerror(char*);
+void parseUntil(char escChar, const char *delStr);
 
 int column = 0;
 int line = 0;
@@ -29,6 +30,26 @@ e			[Ee]-?{d}+
 ")"										{ column += yyleng; return ')'; }
 
 	/* operators */
+
+"*="									{ column += yyleng; return ASSIGN_MUL; }
+"/="									{ column += yyleng; return ASSIGN_DIV; }
+"%="									{ column += yyleng; return ASSIGN_REM; }
+"+="									{ column += yyleng; return ASSIGN_ADD; }
+"-="									{ column += yyleng; return ASSIGN_SUB; }
+"<<="									{ column += yyleng; return ASSIGN_SHL; }
+">>="									{ column += yyleng; return ASSIGN_ASHR; }
+">>>="								{ column += yyleng; return ASSIGN_LSHR; }
+"<<>="								{ column += yyleng; return ASSIGN_ROL; }
+">><="								{ column += yyleng; return ASSIGN_ROR; }
+"&="									{ column += yyleng; return ASSIGN_AND; }
+"^="									{ column += yyleng; return ASSIGN_XOR; }
+"|="									{ column += yyleng; return ASSIGN_OR; }
+"and="								{ column += yyleng; return ASSIGN_BAND; }
+"or="									{ column += yyleng; return ASSIGN_BOR; }
+"xor="								{ column += yyleng; return ASSIGN_BXOR; }
+
+
+
 
 "~"										{ column += yyleng; return '/'; }
 "not"									{ column += yyleng; return NOT; }
@@ -71,6 +92,7 @@ e			[Ee]-?{d}+
 
 ","										{ column += yyleng; return ','; }
 
+
 	/* primitive types */
 void									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return VOID_PRIMITIVE; }
 bool									{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return BOOL_PRIMITIVE; }
@@ -98,11 +120,39 @@ u?fixed{d}*{e}?				{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); 
 -?{d}+"."{d}*{e}?			{ column += yyleng; yylval.syntax = strndup(yytext, yyleng); return DEC_CONSTANT; }
 
 	/* misc */
+"/*"									{ parseUntil('\0', "*/"); }
+"//"									{ parseUntil('\0', "\n"); }
 [\n]									{ ++line; column = 0; str = yytext+1; }
 [ \t\v\f]							{ column += yyleng; }
 .											{ column += yyleng; /* ignore unmatched characters */ }
 
 %%
+
+void parseUntil(char escChar, const char *delStr)
+{
+	int key = yyinput();
+	bool escape = false;
+	int index = 0;
+	while (key != EOF) {
+		if (key == '\n') {
+			++line;
+			column = 0;
+		} else {
+			++column;
+		}
+		
+		if (key == delStr[index] && (index > 0 || !escape)) {
+			++index;
+		} else if (delStr[index] == '\0') {
+			return;
+		} else if (index > 0) {
+			index = 0;
+		}
+
+		escape = key == escChar;
+		key = yyinput();
+	}
+}
 
 int yywrap(void) {
 	return 1;
