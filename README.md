@@ -83,19 +83,19 @@ However, variable assignment returns void and must be separate statements.
 <table>
 <tr><th>Operator</th><th>Description</th><th>Implemented</th></tr>
 <tr><td><code>a=b;</code></td><td>direct assignment</td><td>yes</td></tr>
-<tr><td><code>a+=b;</code></td><td>inplace add</td><td>no</td></tr>
-<tr><td><code>a-=b;</code></td><td>inplace subtract</td><td>no</td></tr>
-<tr><td><code>a&#42;=b;</code></td><td>inplace multiply</td><td>no</td></tr>
-<tr><td><code>a/=b;</code></td><td>inplace divide</td><td>no</td></tr>
-<tr><td><code>a%=b;</code></td><td>inplace remainder</td><td>no</td></tr>
-<tr><td><code>a&lt;&lt;=b;</code></td><td>inplace left shift</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;=b;</code></td><td>inplace logical right shift</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;&gt;=b;</code></td><td>inplace arithmetic right shift</td><td>no</td></tr>
-<tr><td><code>a&lt;&lt;&gt;=b;</code></td><td>inplace rotate left</td><td>no</td></tr>
-<tr><td><code>a&gt;&gt;&lt;=b;</code></td><td>inplace rotate right</td><td>no</td></tr>
-<tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>no</td></tr>
-<tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>no</td></tr>
-<tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>no</td></tr>
+<tr><td><code>a+=b;</code></td><td>inplace add</td><td>yes</td></tr>
+<tr><td><code>a-=b;</code></td><td>inplace subtract</td><td>yes</td></tr>
+<tr><td><code>a&#42;=b;</code></td><td>inplace multiply</td><td>yes</td></tr>
+<tr><td><code>a/=b;</code></td><td>inplace divide</td><td>yes</td></tr>
+<tr><td><code>a%=b;</code></td><td>inplace remainder</td><td>yes</td></tr>
+<tr><td><code>a&lt;&lt;=b;</code></td><td>inplace left shift</td><td>yes</td></tr>
+<tr><td><code>a&gt;&gt;=b;</code></td><td>inplace logical right shift</td><td>yes</td></tr>
+<tr><td><code>a&gt;&gt;&gt;=b;</code></td><td>inplace arithmetic right shift</td><td>yes</td></tr>
+<tr><td><code>a&lt;&lt;&gt;=b;</code></td><td>inplace rotate left</td><td>yes</td></tr>
+<tr><td><code>a&gt;&gt;&lt;=b;</code></td><td>inplace rotate right</td><td>yes</td></tr>
+<tr><td><code>a&=b;</code></td><td>inplace bitwise AND</td><td>yes</td></tr>
+<tr><td><code>a^=b;</code></td><td>inplace bitwise XOR</td><td>yes</td></tr>
+<tr><td><code>a|=b;</code></td><td>inplace bitwise OR</td><td>yes</td></tr>
 </table>
 
 The usual primitive types are supported with added support for fixed point numbers. Here, <n> represents the bitwidth of the type and <m> represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
