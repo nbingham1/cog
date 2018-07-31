@@ -6,7 +6,7 @@ namespace Cog
 {
 
 Info *getTypename(int token, char *txt);
-Info *getStaticArrayTypename(Info *name, Info *cnst);
+Info *getStaticArrayTypename(Info *name, Info *size);
 Info *getDynamicArrayTypename(Info *name);
 Info *getPointerTypename(Info *name);
 

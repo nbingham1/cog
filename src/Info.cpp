@@ -13,7 +13,6 @@ Typename::Typename()
 {
 	prim = NULL;
 	base = NULL;
-	pointerCount = 0;
 }
 
 Typename::Typename(const Typename &copy)
@@ -23,7 +22,7 @@ Typename::Typename(const Typename &copy)
 	else
 		prim = NULL;
 	base = copy.base;
-	pointerCount = copy.pointerCount;
+	modifiers = copy.modifiers;
 }
 
 Typename::~Typename()
@@ -112,16 +111,22 @@ llvm::Type *Typename::getLlvm() const
 
 std::string Typename::getName() const
 {
-	std::string result;
+	std::ostringstream result;
 	if (prim)
-		result = prim->getName();
+		result << prim->getName();
 	else if (base)
-		result = base->getName();
+		result << base->getName();
 	else
-		result = "(undefined)";
-	for (int i = 0; i < pointerCount; i++)
-		result += "*";
-	return result;
+		result << "(undefined)";
+	for (int i = 0; i < (int)modifiers.size(); i++) {
+		if (modifiers[i] == Typename::POINTER)
+			result << "*";
+		else if (modifiers[i] == Typename::DYNAMIC_ARRAY)
+			result << "[]";
+		else
+			result << "[" << modifiers[i] << "]";
+	}
+	return result.str();
 }
 
 llvm::Value *Typename::undefValue() const
@@ -139,15 +144,13 @@ bool Typename::isSet() const
 	return (prim != NULL || base != NULL);
 }
 
-void Typename::setPrimType(llvm::Type *llvmType, int kind, int bitwidth, int exponent, int pointerCount)
+void Typename::setPrimType(llvm::Type *llvmType, int kind, int bitwidth, int exponent)
 {
 	if (prim)
 		delete prim;
 	base = NULL;
 	
 	prim = new PrimType(llvmType, kind, bitwidth, exponent);
-
-	this->pointerCount = pointerCount;
 }
 
 Typename &Typename::operator=(const Typename &copy)
@@ -160,13 +163,13 @@ Typename &Typename::operator=(const Typename &copy)
 	else
 		prim = NULL;
 	base = copy.base;
-	pointerCount = copy.pointerCount;
+	modifiers = copy.modifiers;
 	return *this;
 }
 
 bool operator==(const Typename &t1, const Typename &t2)
 {
-	if (t1.pointerCount != t2.pointerCount)
+	if (t1.modifiers != t2.modifiers)
 		return false;
 
 	if (t1.prim != NULL && t2.prim != NULL) {

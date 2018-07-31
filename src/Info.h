@@ -25,14 +25,21 @@ struct Typename
 	PrimType *prim;
 	BaseType *base;
 
-	int pointerCount;
+	enum
+	{
+		STATIC_ARRAY = 0,
+		POINTER = -1,
+		DYNAMIC_ARRAY = -2
+	};
+
+	std::vector<long> modifiers;
 
 	llvm::Type *getLlvm() const;
 	std::string getName() const;
 	llvm::Value *undefValue() const;
 	bool isSet() const;
 
-	void setPrimType(llvm::Type *llvmType, int kind, int bitwidth = 0, int exponent = 0, int pointerCount = 0);
+	void setPrimType(llvm::Type *llvmType, int kind, int bitwidth = 0, int exponent = 0);
 
 	static Typename getVoid();
 	static Typename getBool();

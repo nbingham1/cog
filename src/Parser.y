@@ -341,8 +341,8 @@ argument_list
 
 constant
 	: BOOL_CONSTANT	{ $<info>$ = Cog::getConstant(BOOL_CONSTANT, $<syntax>1); }
-	| HEX_CONSTANT	{ $<info>$ = Cog::getConstant(HEX_CONSTANT, $<syntax>1); }
 	| DEC_CONSTANT	{ $<info>$ = Cog::getConstant(DEC_CONSTANT, $<syntax>1); }
+	| HEX_CONSTANT	{ $<info>$ = Cog::getConstant(HEX_CONSTANT, $<syntax>1); }
 	| BIN_CONSTANT	{ $<info>$ = Cog::getConstant(BIN_CONSTANT, $<syntax>1); }
 	| STRING_CONSTANT	{ $<info>$ = Cog::getConstant(STRING_CONSTANT, $<syntax>1); }
 	;
@@ -352,8 +352,8 @@ instance
 	;
 
 type_specifier
-	: type_specifier '[' constant ']' { $<info>$ = Cog::getStaticArrayTypename($<info>1, $<info>3); }
-	| type_specifier '[' ']' { $<info>$ = Cog::getDynamicArrayTypename($<info>1); }
+	: type_specifier '[' ']' { $<info>$ = Cog::getDynamicArrayTypename($<info>1); }
+	| type_specifier '[' constant ']' { $<info>$ = Cog::getStaticArrayTypename($<info>1, $<info>3); }
 	| type_specifier '*' { $<info>$ = Cog::getPointerTypename($<info>1); }
 	| VOID_PRIMITIVE { $<info>$ = Cog::getTypename(VOID_PRIMITIVE, $<syntax>1); }
 	| BOOL_PRIMITIVE { $<info>$ = Cog::getTypename(BOOL_PRIMITIVE, $<syntax>1); }

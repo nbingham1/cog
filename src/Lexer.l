@@ -28,6 +28,8 @@ e			[Ee]-?{d}+
 "}"										{ column += yyleng; return '}'; }
 "("										{ column += yyleng; return '('; }
 ")"										{ column += yyleng; return ')'; }
+"["										{ column += yyleng; return '['; }
+"]"										{ column += yyleng; return ']'; }
 
 	/* operators */
 

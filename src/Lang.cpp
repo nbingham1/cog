@@ -76,30 +76,57 @@ Info *getTypename(int token, char *txt)
 	}
 }
 
-Info *getStaticArrayTypename(Info *name, Info *cnst)
+Info *getStaticArrayTypename(Info *name, Info *size)
 {
-	if (name)
+	int64_t size_value = 0;
+	if (ConstantInt *size_cnst = dyn_cast<ConstantInt>(size->value)) {
+		size_value = size_cnst->getSExtValue();
+	} else {
+		error() << "static array size must be a constant expression." << endl;
 		delete name;
-	if (cnst)
-		delete cnst;
+		delete size;
+		return NULL;
+	}
 
-	return NULL;
+	if (size_value > 0) {
+		name->type.modifiers.push_back(size_value);
+		if (name->type.prim != NULL)
+			name->type.prim->llvmType = llvm::ArrayType::get(name->type.prim->llvmType, size_value);
+		else if (name->type.base != NULL)
+			name->type.base->llvmType = llvm::ArrayType::get(name->type.base->llvmType, size_value);
+	} else {
+		error() << "array size must be non-negative." << endl;
+		delete name;
+		delete size;
+		return NULL;
+	}
+
+	if (size)
+		delete size;
+
+	return name;
 }
 
 Info *getDynamicArrayTypename(Info *name)
 {
-	if (name)
-		delete name;
+	name->type.modifiers.push_back(Typename::DYNAMIC_ARRAY);
+	if (name->type.prim != NULL)
+		name->type.prim->llvmType = llvm::PointerType::getUnqual(name->type.prim->llvmType);
+	else if (name->type.base != NULL)
+		name->type.base->llvmType = llvm::PointerType::getUnqual(name->type.base->llvmType);
 
-	return NULL;
+	return name;
 }
 
 Info *getPointerTypename(Info *name)
 {
-	if (name)
-		delete name;
+	name->type.modifiers.push_back(Typename::POINTER);
+	if (name->type.prim != NULL)
+		name->type.prim->llvmType = llvm::PointerType::getUnqual(name->type.prim->llvmType);
+	else if (name->type.base != NULL)
+		name->type.base->llvmType = llvm::PointerType::getUnqual(name->type.base->llvmType);
 
-	return NULL;
+	return name;
 }
 
 Info *getConstant(int64_t cnst)
