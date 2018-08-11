@@ -51,7 +51,7 @@ struct Compiler
 	Module *module;
 	std::string source;
 
-	std::list<BaseType> types;
+	std::list<Type*> types;
 	std::vector<Scope> scopes;
 
 	BaseType *currFn;
