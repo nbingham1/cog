@@ -22,6 +22,11 @@ Type::~Type()
 {
 }
 
+llvm::Value *Type::undefValue() const
+{
+	return llvm::undefValue::get(llvmType);
+}
+
 Declaration::Declaration()
 {
 }
@@ -94,7 +99,7 @@ std::string Fixed::name() const
 
 	// TODO exponent needs to be base 10
 	if (exponent == 0)
-		result << "int";
+		result << "int" << bitwidth;
 	else
 		result << "fixed" << bitwidth << "e" << exponent;
 	return result.str();

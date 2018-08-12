@@ -7,6 +7,9 @@
 
 #include <list>
 
+namespace Cog
+{
+
 struct Symbol : Declaration
 {
 	static const int id = __COUNTER__;
@@ -25,3 +28,4 @@ struct Symbol : Declaration
 	llvm::Value *getValue();
 };
 
+}

@@ -47,6 +47,7 @@ struct Type
 
 	virtual std::string name() const = 0;
 	virtual bool eq(Type *other) const = 0;
+	llvm::Value *undefValue() const;
 };
 
 struct Declaration

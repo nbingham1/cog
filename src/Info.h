@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Type.h"
+#include "Variable.h"
+
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Value.h>
 #include <llvm/IR/BasicBlock.h>
