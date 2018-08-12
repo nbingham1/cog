@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-extern Compiler cog;
+extern Cog::Compiler cog;
 
 namespace Cog
 {
@@ -137,7 +137,7 @@ Float::Float(int bitwidth)
 		this->sigwidth = 64;
 		this->expmin = -16383;
 		this->expmax = 16384;
-		this->llvmType = llvm::Type::getFP80Ty(cog.context);
+		this->llvmType = llvm::Type::getX86_FP80Ty(cog.context);
 		break;
 	case 128:
 		this->sigwidth = 113;
@@ -177,6 +177,7 @@ bool Float::eq(Type *other) const
 
 StaticArray::StaticArray()
 {
+	this->llvmType = NULL;
 	this->arrType = NULL;
 	this->size = -1;
 }
@@ -185,6 +186,7 @@ StaticArray::StaticArray(Type *arrType, int size)
 {
 	this->arrType = arrType;
 	this->size = size;
+	this->llvmType = llvm::ArrayType::get(arrType->llvmType, size);
 }
 
 StaticArray::~StaticArray()
@@ -216,11 +218,13 @@ bool StaticArray::eq(Type *other) const
 Pointer::Pointer()
 {
 	this->ptrType = NULL;
+	this->llvmType = NULL;
 }
 
 Pointer::Pointer(Type *ptrType)
 {
 	this->ptrType = ptrType;
+	this->llvmType = llvm::PointerType::get(ptrType->llvmType, 0);
 }
 
 Pointer::~Pointer()
@@ -248,11 +252,25 @@ bool Pointer::eq(Type *other) const
 
 Struct::Struct()
 {
+	this->llvmType = NULL;
 }
 
 Struct::Struct(std::string typeName)
 {
 	this->typeName = typeName;
+	this->llvmType = llvm::StructType::create(cog.context, typeName);
+}
+
+Struct::Struct(std::string typeName, std::vector<Declaration> members)
+{
+	std::vector<llvm::Type*> memberTypes;
+	for (int i = 0; i < (int)members.size(); i++) {
+		memberTypes.push_back(members[i].type->llvmType);
+	}
+
+	this->typeName = typeName;
+	this->members = members;
+	this->llvmType = llvm::StructType::create(cog.context, memberTypes, typeName);
 }
 
 Struct::~Struct()
@@ -261,23 +279,7 @@ Struct::~Struct()
 
 std::string Struct::name() const
 {
-	if (typeName.size() > 0)
-		return typeName;
-	else {
-		std::stringstream result;
-		result << "{";
-		for (int i = 0; i < (int)members.size(); i++) {
-			if (i != 0)
-				result << ",";
-
-			if (members[i].type != NULL)
-				result << members[i].type->name();
-			else
-				result << "undefined";
-		}
-		result << "}";
-		return result.str();
-	}
+	return typeName;
 }
 
 bool Struct::eq(Type *other) const
@@ -286,11 +288,57 @@ bool Struct::eq(Type *other) const
 		return false;
 
 	const Struct *otherStruct = other->get(this);
-	if (members.size() != otherStruct->members.size())
+	return otherStruct->typeName == typeName;
+}
+
+Tuple::Tuple()
+{
+	this->llvmType = NULL;
+}
+
+Tuple::Tuple(std::vector<Declaration> members)
+{
+	std::vector<llvm::Type*> memberTypes;
+	for (int i = 0; i < (int)members.size(); i++) {
+		memberTypes.push_back(members[i].type->llvmType);
+	}
+
+	this->members = members;
+	this->llvmType = llvm::StructType::get(cog.context, memberTypes);
+}
+
+Tuple::~Tuple()
+{
+}
+
+std::string Tuple::name() const
+{
+	std::stringstream result;
+	result << "{";
+	for (int i = 0; i < (int)members.size(); i++) {
+		if (i != 0)
+			result << ",";
+
+		if (members[i].type != NULL)
+			result << members[i].type->name();
+		else
+			result << "undefined";
+	}
+	result << "}";
+	return result.str();
+}
+
+bool Tuple::eq(Type *other) const
+{
+	if (other->id != id)
+		return false;
+
+	const Tuple *otherTuple = other->get(this);
+	if (members.size() != otherTuple->members.size())
 		return false;
 
 	for (int i = 0; i < (int)members.size(); i++) {
-		if (!members[i].type->eq(otherStruct->members[i].type))
+		if (!members[i].type->eq(otherTuple->members[i].type))
 			return false;
 	}
 
@@ -299,8 +347,26 @@ bool Struct::eq(Type *other) const
 
 Function::Function()
 {
+	llvmType = NULL;
 	retType = NULL;
-	recvType = NULL;
+	thisType = NULL;
+}
+
+Function::Function(Type *retType, Type *thisType, std::string typeName, std::vector<Declaration> args)
+{
+	std::vector<llvm::Type*> argTypes;
+	if (thisType != NULL)
+		argTypes.push_back(thisType->llvmType);
+
+	for (int i = 0; i < (int)args.size(); i++) {
+		argTypes.push_back(args[i].type->llvmType);
+	}
+
+	this->retType = retType;
+	this->thisType = thisType;
+	this->typeName = typeName;
+	this->args = args;
+	this->llvmType = llvm::FunctionType::get(retType->llvmType, argTypes, false);
 }
 
 Function::~Function()
@@ -327,12 +393,9 @@ bool Function::eq(Type *other) const
 		return false;
 
 	Function *otherFunc = other->get(this);
-	if ((retType == NULL) != (otherFunc->retType == NULL) ||
-	    (thisType == NULL) != (otherFunc->thisType == NULL))
+	if ((thisType == NULL) != (otherFunc->thisType == NULL))
 		return false;
 
-	if (retType != NULL && !retType->eq(otherFunc->retType))
-		return false;
 	if (thisType != NULL && !thisType->eq(otherFunc->thisType))
 		return false;
 

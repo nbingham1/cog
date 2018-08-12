@@ -42,5 +42,21 @@ llvm::Value *fn_div2(llvm::Value *v0, int shift)
 	return cog.builder.CreateAShr(sel, shift);
 }
 
+void fn_exit(llvm::Value *exitCode)
+{
+	vector<llvm::Type*> argTypes;
+	vector<llvm::Value*> argValues;
+
+	if (exitCode != NULL) {
+		argTypes.push_back(Type::getInt32Ty(cog.context));
+		argValues.push_back(exitCode);
+	}
+
+	llvm::FunctionType *fnType = llvm::FunctionType::get(llvm::Type::getVoidTy(cog.context), argTypes, false);	
+	llvm::InlineAsm *asmIns = llvm::InlineAsm::get(fnType, "movl $$1,%eax; int $$0x80", "", true);
+	cog.builder.CreateCall(asmIns, argValues);
+	cog.builder.CreateUnreachable();
+}
+
 }
 

@@ -19,6 +19,10 @@ Compiler::Compiler() : builder(context)
 
 Compiler::~Compiler()
 {
+	for (auto type = types.begin(); type != types.end(); type++) {
+		delete *type;
+	}
+	types.clear();
 }
 
 void Compiler::printScope()
@@ -45,81 +49,17 @@ void Compiler::popScope()
 	scopes.pop_back();
 }
 
-BaseType *Compiler::getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Declaration> &args)
+Type *Compiler::getType(Type *newType)
 {
 	for (auto type = types.begin(); type != types.end(); type++) {
-		if (type->name == name
-		 && type->retType == retType
-		 && type->thisType == thisType
-		 && type->args == args) {
-			return &(*type);
+		if (*type->eq(newType)) {
+			delete newType;
+			return *type;
 		}
 	}
 
-	types.push_back(BaseType());
-	BaseType *result = &types.back();
-	result->retType = retType;
-	result->thisType = thisType;
-	result->name = name;
-	result->args = args;
-
-	std::vector<llvm::Type*> llvmArgs;
-	llvmArgs.reserve(args.size()+1);
-	if (thisType.isSet() && (thisType.prim == NULL || thisType.prim->kind != PrimType::Void))
-		llvmArgs.push_back(thisType.getLlvm());
-
-	for (auto arg = args.begin(); arg != args.end(); arg++) {
-		llvmArgs.push_back(arg->type.getLlvm());
-	}
-
-	result->llvmType = FunctionType::get(retType.getLlvm(), llvmArgs, false);
-	return result;
-}
-
-BaseType *Compiler::getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Symbol> &symbols)
-{
-	std::vector<Declaration> args;
-	args.reserve(symbols.size());
-	for (auto symbol = symbols.begin(); symbol != symbols.end(); symbol++)
-		args.push_back(Declaration(&(*symbol)));
-
-	return getFunction(retType, thisType, name, args);
-}
-
-BaseType *Compiler::getStructure(std::string name, const std::vector<Declaration> &args)
-{
-	for (auto type = types.begin(); type != types.end(); type++) {
-		if (type->name == name
-		 && !type->retType.isSet()
-		 && !type->thisType.isSet()
-		 && type->args == args) {
-			return &(*type);
-		}
-	}
-
-	types.push_back(BaseType());
-	BaseType *result = &types.back();
-	result->name = name;
-	result->args = args;
-
-	std::vector<llvm::Type*> llvmArgs;
-	for (auto arg = args.begin(); arg != args.end(); arg++) {
-		llvmArgs.push_back(arg->type.getLlvm());
-	}
-
-	result->llvmType = StructType::create(context, llvmArgs, name, false);
-
-	return result;
-}
-
-BaseType *Compiler::getStructure(std::string name, const std::vector<Symbol> &symbols)
-{
-	std::vector<Declaration> args;
-	args.reserve(symbols.size());
-	for (auto symbol = symbols.begin(); symbol != symbols.end(); symbol++)
-		args.push_back(Declaration(&(*symbol)));
-
-	return getStructure(name, args);
+	types.push_back(newType);
+	return newType;
 }
 
 void Compiler::loadFile(string filename)
@@ -162,31 +102,14 @@ bool Compiler::setTarget(string targetTriple)
 	return true;
 }
 
-
-void Compiler::createExit(Value *ret)
-{
-	vector<Type*> argTypes;
-	vector<Value*> argValues;
-
-	if (ret != NULL) {
-		argTypes.push_back(Type::getInt32Ty(context));
-		argValues.push_back(ret);
-	}
-
-	FunctionType *returnType = FunctionType::get(Type::getVoidTy(context), argTypes, false);	
-	InlineAsm *asmIns = InlineAsm::get(returnType, "movl $$1,%eax; int $$0x80", "", true);
-	builder.CreateCall(asmIns, argValues);
-	builder.CreateUnreachable();
-}
-
-bool Compiler::emit(TargetMachine::CodeGenFileType fileType)
+bool Compiler::emit(llvm::TargetMachine::CodeGenFileType fileType)
 {
 	if (this->targetTriple == "")
 		setTarget();
 
 	size_t typeindex = source.find_last_of(".");
 	string filename = source.substr(0, typeindex);
-	if (fileType == TargetMachine::CGFT_AssemblyFile)
+	if (fileType == llvm::TargetMachine::CGFT_AssemblyFile)
 		filename += ".s";
 	else
 		filename += ".o";

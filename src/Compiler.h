@@ -33,9 +33,6 @@
 
 #include "Info.h"
 
-using namespace llvm;
-using namespace llvm::sys;
-
 namespace Cog
 {
 
@@ -44,33 +41,29 @@ struct Compiler
 	Compiler();
 	~Compiler();
 
-	LLVMContext context;
-	IRBuilder<llvm::NoFolder> builder;
+	llvm::LLVMContext context;
+	llvm::IRBuilder<llvm::NoFolder> builder;
 	std::string targetTriple;
-	TargetMachine *target;
-	Module *module;
+	llvm::TargetMachine *target;
+	llvm::Module *module;
 	std::string source;
 
 	std::list<Type*> types;
 	std::vector<Scope> scopes;
 
-	BaseType *currFn;
+	Function *currFn;
 
 	void printScope();
 	Scope* getScope();
 	void pushScope();
 	void popScope();
 
-	BaseType *getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Declaration> &args);
-	BaseType *getFunction(Typename retType, Typename thisType, std::string name, const std::vector<Symbol> &symbols);
-	BaseType *getStructure(std::string name, const std::vector<Declaration> &args);
-	BaseType *getStructure(std::string name, const std::vector<Symbol> &symbols);
+	Type *getType(Type *newType);
 
 	void loadFile(std::string filename);
-	bool setTarget(std::string targetTriple = sys::getDefaultTargetTriple());	
-	void createExit(Value *ret = NULL);
+	bool setTarget(std::string targetTriple = llvm::sys::getDefaultTargetTriple());	
 	
-	bool emit(TargetMachine::CodeGenFileType fileType = TargetMachine::CGFT_ObjectFile);
+	bool emit(llvm::TargetMachine::CodeGenFileType fileType = llvm::TargetMachine::CGFT_ObjectFile);
 };
 
 

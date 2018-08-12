@@ -149,9 +149,24 @@ struct Struct : Type
 	
 	Struct();
 	Struct(std::string typeName);
+	Struct(std::string typeName, std::vector<Declaration> members);
 	~Struct();
 
 	std::string typeName;
+	std::vector<Declaration> members;
+
+	std::string name() const;
+	bool eq(Type *other) const;
+};
+
+struct Tuple : Type
+{
+	static const int id = __COUNTER__;
+	
+	Tuple();
+	Tuple(std::vector<Declaration> members);
+	~Tuple();
+
 	std::vector<Declaration> members;
 
 	std::string name() const;
@@ -163,6 +178,7 @@ struct Function : Type
 	static const int id = __COUNTER__;
 	
 	Function();
+	Function(Type *retType, Type *thisType, std::string typeName, std::vector<Declaration> args);
 	~Function();
 
 	std::string typeName;
