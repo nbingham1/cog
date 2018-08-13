@@ -15,32 +15,6 @@
 namespace Cog
 {
 
-struct MemberReference
-{
-	llvm::AllocaInst *inst;
-	int index;
-};
-
-struct Symbol
-{
-	Symbol(Type *type, std::string name);
-	Symbol(const Symbol &copy);
-	~Symbol();
-
-	Type *type;
-	std::string name;
-
-	MemberReference inst;
-
-	std::list<llvm::Value*> values;
-	std::list<llvm::Value*>::iterator curr;
-
-	void nextValue();
-	void popValue();
-	void setValue(llvm::Value *value);
-	llvm::Value *getValue();
-};
-
 struct Scope
 {
 	Scope();
@@ -74,8 +48,7 @@ struct Info
 	std::string text;
 	Type *type;
 	llvm::Value *value;
-	MemberReference *inst;
-	Symbol *symbol;
+	Declaration *variable;
 	
 	Info *args;
 	Info *next;

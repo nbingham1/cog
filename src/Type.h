@@ -17,7 +17,7 @@ struct Type
 	static const int id = __COUNTER__;
 
 	Type();
-	~Type();
+	virtual ~Type();
 
 	llvm::Type *llvmType;
 
@@ -56,10 +56,34 @@ struct Declaration
 
 	Declaration();
 	Declaration(Type *type, std::string name);
-	~Declaration();
+	virtual ~Declaration();
 
 	Type *type;
 	std::string name;
+
+	template <typename ToInst>
+	ToInst *get(const ToInst *to = NULL)
+	{
+		return (ToInst*)this;
+	}
+
+	template <typename ToInst>
+	const ToInst *get(const ToInst *to = NULL) const
+	{
+		return (const ToInst*)this;
+	}
+
+	template <typename cmpInst>
+	bool is()
+	{
+		return id == cmpInst::id;
+	}
+
+	template <typename cmpInst>
+	bool is() const
+	{
+		return id == cmpInst::id;
+	}
 };
 
 struct Void : Type

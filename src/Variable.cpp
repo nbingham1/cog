@@ -4,24 +4,50 @@
 namespace Cog
 {
 
-Symbol::Symbol(std::string name, Typename type)
+Instance::Instance(Type *type, std::string name) : Declaration(type, name)
 {
-	this->type = type;
-	this->name = name;
-	this->inst = NULL;
-	llvm::Value *value = type.undefValue();
-	if (value) {
-		value->setName(this->name);
-		this->values.push_back(value);
-	}
-	this->curr = this->values.begin();
+	value = type->undefValue();
+	value->setName(name);
 }
 
-Symbol::Symbol(const Symbol &copy)
+Instance::Instance(const Declaration &decl) : Declaration(decl)
 {
-	this->type = copy.type;
-	this->name = copy.name;
-	this->inst = copy.inst;
+	value = type->undefValue();
+	value->setName(name);
+}
+
+Instance::~Instance()
+{
+}
+
+Symbol::Symbol(Type *type, std::string name) : Declaration(type, name)
+{
+	ref = NULL;
+
+	values.push_back(type->undefValue());
+	values.back().setName(name);
+	curr = values.begin();
+}
+
+Symbol(const Declaration &decl) : Declaration(decl)
+{
+	ref = NULL;
+
+	values.push_back(type->undefValue());
+	values.back().setName(name);
+	curr = values.begin();
+}
+
+Symbol(const Instance &inst) : Declaration(inst)
+{
+	this->ref = inst.ref;
+	this->values.push_back(inst.value);
+	this->curr = values.begin();
+}
+
+Symbol::Symbol(const Symbol &copy) : Declaration(copy)
+{
+	this->ref = copy.ref;
 	this->values = copy.values;
 	for (curr = values.begin(); curr != values.end() && *curr != *copy.curr; ++curr);
 }

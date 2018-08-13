@@ -52,7 +52,7 @@ void Compiler::popScope()
 Type *Compiler::getType(Type *newType)
 {
 	for (auto type = types.begin(); type != types.end(); type++) {
-		if (*type->eq(newType)) {
+		if ((*type)->eq(newType)) {
 			delete newType;
 			return *type;
 		}
@@ -65,36 +65,36 @@ Type *Compiler::getType(Type *newType)
 void Compiler::loadFile(string filename)
 {
 	
-	module = new Module(filename, context);
+	module = new llvm::Module(filename, context);
 	source = filename;
 }
 
 bool Compiler::setTarget(string targetTriple)
 {
 	if (!module) {
-		errs() << "Module not yet initialized";
+		llvm::errs() << "Module not yet initialized";
 		return false;
 	} else if (targetTriple != this->targetTriple) {
 		if (this->targetTriple == "") {
-			InitializeAllTargetInfos();
-			InitializeAllTargets();
-			InitializeAllTargetMCs();
-			InitializeAllAsmParsers();
-			InitializeAllAsmPrinters();
+			llvm::InitializeAllTargetInfos();
+			llvm::InitializeAllTargets();
+			llvm::InitializeAllTargetMCs();
+			llvm::InitializeAllAsmParsers();
+			llvm::InitializeAllAsmPrinters();
 		}
 
 		this->targetTriple = targetTriple;
 		module->setTargetTriple(targetTriple);
 
 		string error;
-		const Target *targetEntry = TargetRegistry::lookupTarget(targetTriple, error);
+		const llvm::Target *targetEntry = llvm::TargetRegistry::lookupTarget(targetTriple, error);
 		if (!targetEntry) {
-			errs() << "error: " << error;
+			llvm::errs() << "error: " << error;
 			return false;
 		}
 
-		TargetOptions options;
-		Optional<Reloc::Model> relocModel;
+		llvm::TargetOptions options;
+		llvm::Optional<llvm::Reloc::Model> relocModel;
 		target = targetEntry->createTargetMachine(targetTriple, "generic", "", options, relocModel);
 
 		module->setDataLayout(target->createDataLayout());
@@ -115,26 +115,26 @@ bool Compiler::emit(llvm::TargetMachine::CodeGenFileType fileType)
 		filename += ".o";
 
   std::error_code EC;
-  raw_fd_ostream dest(filename, EC, sys::fs::F_None);
+  llvm::raw_fd_ostream dest(filename, EC, llvm::sys::fs::F_None);
 
   if (EC) {
-    errs() << "Could not open file: " << EC.message();
+    llvm::errs() << "Could not open file: " << EC.message();
     return false;
   }
 
-  legacy::PassManager pass;
+  llvm::legacy::PassManager pass;
 	
-	pass.add(createPrintModulePass(llvm::outs(), "Hello!"));
+	pass.add(llvm::createPrintModulePass(llvm::outs(), "Hello!"));
 
 	if (target->addPassesToEmitFile(pass, dest, fileType, llvm::CodeGenOpt::Level::None)) {
-    errs() << "The target machine can't emit a file of this type";
+    llvm::errs() << "The target machine can't emit a file of this type";
     return false;
   }
 
   pass.run(*module);
   dest.flush();
 
-  outs() << "Wrote " << filename << "\n";
+  llvm::outs() << "Wrote " << filename << "\n";
 
   return true;
 }
