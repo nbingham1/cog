@@ -101,7 +101,7 @@ However, variable assignment returns void and must be separate statements.
 <tr><td><code>a or=b;</code></td><td>inplace boolean OR</td><td>yes</td></tr>
 </table>
 
-The usual primitive types are supported with added support for fixed point numbers. Here, <n> represents the bitwidth of the type and <m> represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. int<n>, uint<n>, fixed<n>e<m>, and ufixed<n>e<m> all support arbitrary values for <n> and <m>. However, float<n> is limited to bitwidths of 16, 32, 64, or 128.
+The usual primitive types are supported with added support for fixed point numbers. Here, `<n>` represents the bitwidth of the type and `<m>` represents it's power of 2 exponent. For example, `int32` is a 32 bit signed integer. `fixed32e-5` is a 32 bit fixed point decimal with a five bit fractional precision. `int<n>`, `uint<n>`, `fixed<n>e<m>`, and `ufixed<n>e<m>` all support arbitrary values for `<n>` and `<m>`. However, `float<n>` is implemented by the smallest of 16, 32, 64, or 128 sufficient for `<n>`.
 
 ```
 bool
@@ -351,9 +351,25 @@ ValueType Stack<ValueType>::pop()
 
 > This feature is not yet implemented.
 
+
+
 #### Encodings
 
 > This feature is not yet implemented.
+
+This defines a character encoding to be used for strings. 
+
+```
+encode ascii
+{
+	'\NULL': 0,
+	'\SOH': 1,
+	'\STX': 2,
+	...
+	'0-9': 48,
+	...
+}
+```
 
 ### Source Files
 
@@ -550,9 +566,28 @@ void myFunc<MyType, MyType2>(MyType a, MyType2 b)
 
 > This feature is not yet implemented.
 
+
+
 #### Constraints
 
 > This feature is not yet implemented.
+
+Static constraints proven at compile time. 
+
+```
+keep x < y;
+keep z in [a, b, c];
+for (int8 i = 0; i < 10; i++) {
+	keep a[i] < b[i];
+}
+```
+
+Dynamic constraints checked at run-time during tests and debugging, but excluded from production.
+
+```
+assert x < y;
+assert z in [a, b, c];
+```
 
 ## Compiler
 
