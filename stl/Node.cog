@@ -1,0 +1,40 @@
+typename ValueType;
+
+struct Node<ValueType>
+{
+	ValueType value;
+	Node<ValueType> *prev;
+};
+
+keep Node<ValueType> implements Node<ValueType> from "Stack.ifc";
+
+Node<ValueType>::construct(ValueType value, Node<ValueType> *prev)
+{
+	this->value = value;
+	this->prev = prev;
+}
+
+Node<ValueType>::destruct()
+{
+	if (prev)
+		delete prev;
+}
+
+void Node<ValueType>::push(Node<ValueType> list*)
+{
+	assert not prev;
+	prev = list;
+}
+
+Node<ValueType>* Node<ValueType>::pop()
+{
+	Node<ValueType> result* = prev;
+	prev = null;
+	return result;
+}
+
+ValueType Node<ValueType>::get()
+{
+	return value;
+}
+

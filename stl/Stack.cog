@@ -1,0 +1,41 @@
+import as Stacks "Stack.ifc";
+
+typename ValueType;
+
+depend Node implements Stacks.Node<ValueType>;
+	suggest Node = Node<ValueType> from "Node.cog";
+
+struct Stack<ValueType>
+{
+	Node *last;
+}
+
+Stack<ValueType>::construct()
+{
+}
+
+Stack<ValueType>::destruct()
+{
+	if (last)
+		delete last;
+}
+
+keep Stack<ValueType> implements Stack<ValueType> from Stacks;
+
+void Stack<ValueType>::push(ValueType value)
+{
+	Node *node = new Node(value, last);
+	last = node;
+}
+
+void Stack<ValueType>::drop()
+{
+	Node *node = last;
+	last = last->pop();
+	delete node;
+}
+
+ValueType Stack<ValueType>::get()
+{
+	return last->get();
+}

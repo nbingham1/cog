@@ -1,0 +1,8 @@
+
+int32 main()
+{
+	int32 [ 5 ] [ 4 ] a;
+
+	return 0;
+}
+

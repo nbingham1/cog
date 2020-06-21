@@ -1,6 +1,6 @@
 LLVMFLAGS    := $(shell llvm-config-5.0 --cxxflags --ldflags)
 LLVMLIBS     := $(shell llvm-config-5.0 --libs core mcjit native) 
-CXXFLAGS      =  -g -O2 -Wall -fmessage-length=0 -Isrc $(LLVMFLAGS)
+CXXFLAGS      =  -g -O2 -Wall -fmessage-length=0 -Isrc -I../pgen/ -L../pgen/ $(LLVMFLAGS)
 # -g -fprofile-arcs -ftest-coverage
 LEX          := $(wildcard src/*.l)
 YACC         := $(wildcard src/*.y)
@@ -17,12 +17,9 @@ TSOURCES     := $(wildcard test/*.cpp)
 TOBJECTS     := $(TSOURCES:%.cpp=%.o)
 TDEPS        := $(TOBJECTS:%.o=%.d)
 GTEST        := ../googletest
-GTEST_I      := -I$(GTEST)/include -I.
+GTEST_I      := -I$(GTEST)/include -I. 
 GTEST_L      := -L$(GTEST) -L.
 TTARGET       = test_cog
-
--include $(DEPS)
--include $(TDEPS)
 
 all: $(PSOURCES) $(TARGET)
 
@@ -31,8 +28,11 @@ test: $(TARGET) $(TTARGET)
 check: test
 	./$(TTARGET)
 
+-include $(DEPS)
+-include $(TDEPS)
+
 $(TARGET): $(OBJECTS)
-	g++ $(CXXFLAGS) $^ $(LLVMLIBS) -o $@
+	g++ $(CXXFLAGS) $^ $(LLVMLIBS) -lparse -o $@
 
 src/%.l.c: src/%.l
 	lex -o $@ $<

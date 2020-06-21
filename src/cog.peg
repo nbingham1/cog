@@ -1,0 +1,55 @@
+cog = _ ((structdef | functiondef) _)* [\0];
+structdef = "struct" _ instance _ "{" _ (outdecl _ ";" _)* "}";
+functiondef = typename _ (typename _ ~"::" _)? instance _ ~"(" (_ indecl (_ ~";" _ indecl)*)? _ ~")" _ block;
+
+ 
+block = "{" _ (statement (_ statement)*)? _ "}";
+statement = "break" _ ";" | "continue" _ ";" | "return" _ (expression _)? ";" | if_stmt | while_loop | indecl _ ";" | assign _ ";" ;
+
+
+
+while_loop = "while" _ "(" _ expression _ ")" _ (block | statement); 
+if_stmt = "if" _ "(" _ expression _ ")" _ (block | statement)
+	        (_ "else" _ "if" _ "(" _ expression _ ")" _ (block | statement))*
+	        (_ "else" _ (block | statement));
+
+assign = expression _ ("=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | ">>>=" | "<<>=" | ">><=" | "&=" | "^=" | "|=" | "and=" | "xor=" | "or=") _ expression;
+indecl = typename _ instance (_ "[" _ expression _ ~"]")* (_ "#")* (_ "=" expression)? (_ ~"," _ instance (_ "[" _ expression _ ~"]")* (_ "#")* (_ "=" expression)?)*;
+outdecl = typename _ instance (_ "[" _ expression _ "]")* (_ "," _ instance (_ "[" _ expression _ "]")*)*;
+
+expression = exp13 (_ "or" _ exp13)*;
+exp13 = exp12 (_ "xor"  _ exp12)*;
+exp12 = exp11 (_ "and" _ exp11)*;
+exp11 = exp10 (_ ("<" | ">" | "<=" | ">=" | "==" | "!=") _ exp10)?;
+exp10 = exp9 (_ "|" _ exp9)*;
+exp9 = exp8 (_ "^" _ exp8)*;
+exp8 = exp7 (_ "&" _ exp7)*;
+exp7 = exp6 (_ ("<<" | ">>" | ">>>" | "<<>" | ">><") _ exp6)?;
+exp6 = exp5 (_ ("+" | "-") _ exp5)*;
+exp5 = exp4 (_ ("*" | "/" | "%") _ exp4)*;
+
+exp4 = (("-" | "not" | "~") _)* exp2;
+
+exp2 = constant
+	| exp1 _ 
+		( "(" _ (expression _ ("," _ expression _)*)? ")"
+	  | "[" _ expression _ (":" _ expression _)? "]"
+	  | "#"
+	  | "@"
+	  | "." _ exp1)*; 
+
+exp1 = "(" _ expression _ ")" | instance;
+
+constant = bool | int | string | real;
+bool = ~"true" | ~"false";
+int = "0x" integer16 | "0b" integer2 | integer;
+real = integer ("." integer)? ("e" "-"? integer)?;
+string = ~text;
+
+typename = "bool"
+	| ("int" | "uint") integer?
+	| ("fixed" | "ufixed") (integer (~"e" integer)?)?
+	| "float" integer?
+	| "void"
+	| instance (_ "::" _ instance)*;
+

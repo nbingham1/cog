@@ -1,0 +1,25 @@
+struct mystruct {
+	int32 x;
+	uint32 y;
+	fixed64 z;
+}
+
+int32 myfunc(int32 x, y; uint64 z) {
+}
+
+int32 main() {
+	mystruct thing;
+	thing.x = 0x5AF;
+
+	if (thing.x == 5)
+		thing.y = 3;
+	else
+		thing.y = 2;
+
+	thing.z = 0;
+	while (thing.y > 0) {
+		thing.z += 1;
+	}
+
+	return thing.z;
+}

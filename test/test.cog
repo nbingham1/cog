@@ -1,0 +1,17 @@
+void main()
+{
+	int32 x;
+	int32 y;
+	int32 z;
+
+	x = 5;
+	y = 3;
+	
+	asm {
+		movl	x, z
+		subl	y, z
+	}
+
+	return;
+}
+

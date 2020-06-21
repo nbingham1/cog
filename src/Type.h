@@ -5,17 +5,23 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Instructions.h>
 
+#include <functional>
 #include <vector>
-#include <list>
+#include <unordered_map>
 #include <string>
 
 namespace Cog
 {
 
+struct Symbol;
+
 struct Type
 {
-	static const int id = __COUNTER__;
+	typedef std::unordered_map<std::string, Type*> Table;
 
+	static const int typeId = __COUNTER__;
+	static Table table;
+	
 	Type();
 	virtual ~Type();
 
@@ -36,82 +42,53 @@ struct Type
 	template <typename cmpType>
 	bool is()
 	{
-		return id == cmpType::id;
+		return id() == cmpType::typeId;
 	}
 
 	template <typename cmpType>
 	bool is() const
 	{
-		return id == cmpType::id;
+		return id() == cmpType::typeId;
 	}
 
 	virtual std::string name() const = 0;
+	virtual int id() const = 0;
 	virtual bool eq(Type *other) const = 0;
 	llvm::Value *undefValue() const;
-};
 
-struct Declaration
-{
-	static const int id = __COUNTER__;
-
-	Declaration();
-	Declaration(Type *type, std::string name);
-	virtual ~Declaration();
-
-	Type *type;
-	std::string name;
-
-	template <typename ToInst>
-	ToInst *get(const ToInst *to = NULL)
-	{
-		return (ToInst*)this;
-	}
-
-	template <typename ToInst>
-	const ToInst *get(const ToInst *to = NULL) const
-	{
-		return (const ToInst*)this;
-	}
-
-	template <typename cmpInst>
-	bool is()
-	{
-		return id == cmpInst::id;
-	}
-
-	template <typename cmpInst>
-	bool is() const
-	{
-		return id == cmpInst::id;
-	}
+	static Type *define(Type *t);
+	static Type *find(std::string name);
 };
 
 struct Void : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Void();
 	~Void();
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Boolean : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Boolean();
 	~Boolean();
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Fixed : Type
 {
-	static const int id = __COUNTER__;
-	
+	static const int typeId = __COUNTER__;
+
+	Fixed(std::string def);	
 	Fixed(bool isSigned, int bitwidth, int exponent = 0);
 	~Fixed();
 
@@ -120,13 +97,15 @@ struct Fixed : Type
 	int exponent; // base 2
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Float : Type
 {
-	static const int id = __COUNTER__;
-	
+	static const int typeId = __COUNTER__;
+
+	Float(std::string def);	
 	Float(int bitwidth);
 	~Float();
 
@@ -136,12 +115,13 @@ struct Float : Type
 	int expmax;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct StaticArray : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	StaticArray();
 	StaticArray(Type *arrType, int size);
@@ -151,12 +131,13 @@ struct StaticArray : Type
 	int size;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Pointer : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Pointer();
 	Pointer(Type *ptrType);
@@ -165,55 +146,60 @@ struct Pointer : Type
 	Type *ptrType;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
+
 struct Struct : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Struct();
 	Struct(std::string typeName);
-	Struct(std::string typeName, std::vector<Declaration> members);
+	Struct(std::string typeName, std::vector<Symbol> members);
 	~Struct();
 
 	std::string typeName;
-	std::vector<Declaration> members;
+	std::vector<Symbol> members;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Tuple : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Tuple();
-	Tuple(std::vector<Declaration> members);
+	Tuple(std::vector<Type*> members);
 	~Tuple();
 
-	std::vector<Declaration> members;
+	std::vector<Type*> members;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
 
 struct Function : Type
 {
-	static const int id = __COUNTER__;
+	static const int typeId = __COUNTER__;
 	
 	Function();
-	Function(Type *retType, Type *thisType, std::string typeName, std::vector<Declaration> args);
+	Function(Type *retType, Type *thisType, std::vector<Symbol*> args);
 	~Function();
 
-	std::string typeName;
 	Type *retType;
 	Type *thisType;
-	std::vector<Declaration> args;
+	std::vector<Symbol> args;
 
 	std::string name() const;
+	int id() const;
 	bool eq(Type *other) const;
 };
+
 
 }
 

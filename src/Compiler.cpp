@@ -3,63 +3,16 @@
 
 using namespace std;
 
-extern int line;
-extern int column;
-extern const char *str;
-
 namespace Cog
 {
 
 Compiler::Compiler() : builder(context)
 {
 	targetTriple = "";
-	scopes.push_back(Scope());
-	currFn = NULL;
 }
 
 Compiler::~Compiler()
 {
-	for (auto type = types.begin(); type != types.end(); type++) {
-		delete *type;
-	}
-	types.clear();
-}
-
-void Compiler::printScope()
-{
-	printf("Scopes:");
-	for (int i = 0; i < (int)scopes.size(); i++)
-		printf(" %d/%d", (int)std::distance(scopes[i].blocks.begin(), scopes[i].curr), (int)scopes[i].blocks.size());
-	printf("\n");
-}
-
-Scope* Compiler::getScope()
-{
-	return &scopes.back();
-}
-
-void Compiler::pushScope()
-{
-	scopes.push_back(Scope(getScope()));
-}
-
-void Compiler::popScope()
-{
-	scopes[scopes.size()-2].merge(&scopes.back());
-	scopes.pop_back();
-}
-
-Type *Compiler::getType(Type *newType)
-{
-	for (auto type = types.begin(); type != types.end(); type++) {
-		if ((*type)->eq(newType)) {
-			delete newType;
-			return *type;
-		}
-	}
-
-	types.push_back(newType);
-	return newType;
 }
 
 void Compiler::loadFile(string filename)
@@ -137,13 +90,6 @@ bool Compiler::emit(llvm::TargetMachine::CodeGenFileType fileType)
   llvm::outs() << "Wrote " << filename << "\n";
 
   return true;
-}
-
-std::ostream &error_(const char *dfile, int dline)
-{
-	cout << str << endl;
-	cout << dfile << ":" << dline << " error " << line << ":" << column << ": ";
-	return cout;
 }
 
 }

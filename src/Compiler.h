@@ -31,8 +31,6 @@
 #include <string>
 #include <iostream>
 
-#include "Info.h"
-
 namespace Cog
 {
 
@@ -48,26 +46,10 @@ struct Compiler
 	llvm::Module *module;
 	std::string source;
 
-	std::list<Type*> types;
-	std::vector<Scope> scopes;
-
-	Function *currFn;
-
-	void printScope();
-	Scope* getScope();
-	void pushScope();
-	void popScope();
-
-	Type *getType(Type *newType);
-
 	void loadFile(std::string filename);
 	bool setTarget(std::string targetTriple = llvm::sys::getDefaultTargetTriple());	
 	
 	bool emit(llvm::TargetMachine::CodeGenFileType fileType = llvm::TargetMachine::CGFT_ObjectFile);
 };
-
-
-std::ostream &error_(const char *dfile, int dline);
-#define error() error_(__FILE__, __LINE__)
 
 }

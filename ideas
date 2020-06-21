@@ -1,0 +1,108 @@
+usual if/else/while/for/switch control structures
+
+struct, interface, mock, function, test, process, channel
+
+structs and functions only in cog (source) files
+interfaces only in ifc (interface) files
+mocks and tests only in tst (test) files
+process, channel only in prgm (program) files
+
+ifc files may include ifc files
+cog files may include ifc files
+tst files may include one cog file or one ifc file
+prgm files may include prgm and ifc files
+
+interfaces specify a minimal structure definition necessary to interact with a
+particular functionality
+
+interface Vector(Generic T, Integer I)
+{
+	void (This*) set(I, T);
+	T (This*) get(I);
+	I size();
+
+	This () operator+(This, This);
+	This () operator-(This, This);
+	This () operator*(This, This);
+	This () operator/(This, This);
+}
+
+There is a base set of interfaces:
+Generic - matches everything
+Integer - matches integral numbers
+Real - matches real numbers
+Char - matches characters
+This - matches the current interface
+
+structures are a list of variable declarations defining an object. Optionally
+specifying that it implements a given set of interfaces for verification
+purposes. In order for a structure to implement an interface, all of the
+function types listed in the interface must be found in the type table. There
+should also be built-in encode and decode functions for writing to a file and
+reading back in either binary or a human readable encoding.
+
+struct vector : Vector(float32, int32)
+{
+	float32 *elems;
+};
+
+There is a base set of structures:
+void
+int8, int16, int32, int64, int128, int - signed integer types
+uint8, uint16, uint32, uint64, uint128, uint - unsigned integer types
+float16, float32, float64, float80, float128 - floating point real types
+fixed8, fixed16, fixed32, fixed64, fixed128, fixed - fixed point real types
+
+functions define program functionality. They have a return value, a receiver,
+and function arguments.
+
+vector () operator+(vector v1, vector v2)
+{
+	vector result;
+	int32 i = 0;
+	for (; i < v1.size() and i < v2.size(); i++)
+		result.set(i, v1.get(i) + v2.get(i));
+	for (; i < v1.size(); i++)
+		result.set(i, v1.get(i);
+	for (; i < v2.size(); i++)
+		result.set(i, v2.get(i);
+	return result;
+}
+
+float32 (vector*) get(int32 index)
+{
+	return this->elems[index]
+}
+
+mocks enable testing. They are partial implementations of an interface.
+
+mock VectorMock : Vector(float32, int32)
+{
+}
+
+float32 (VectorMock*) get(int32 index)
+{
+	return float32.rand();
+}
+
+Tests check to ensure correct implementation of functions and structs
+
+When compiling the program, mark dependencies using the hash of the compiled file (use the same hash as ipfs)
+then I can just automatically grab the file from ipfs
+
+
+
+
+implement source repo on ipfs as static site with code reviews, rollback, testing, etc.
+implement testing client that reads from ipfs, runs tests, and reports back
+run minimal testing clients with javascript for people who visit the site using a browser.
+
+
+for static formal verification implement the keep keyword
+for memory verification, implement the new, delete, and valid keywords. new and
+delete add to and remove pointers from a hash table. valid checks if a pointer is
+in the table. This removes the need for NULL. 
+
+processes have local static memory, dynamic memory is global. So a process can
+allocate a pointer, but must send the pointer to another process to share it.
+

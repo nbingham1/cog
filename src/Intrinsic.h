@@ -14,6 +14,7 @@ namespace Cog
 
 llvm::Value *fn_abs(llvm::Value *v0);
 llvm::Value *fn_div2(llvm::Value *v0, int shift);
+void fn_exit(llvm::Value *exitCode);
 
 }
 

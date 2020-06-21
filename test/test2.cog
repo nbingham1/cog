@@ -1,0 +1,29 @@
+int32 main()
+{
+	int32 myVar;
+	myVar = 5;
+	int32 myVar2;
+	myVar2 = myVar + 2;
+	myVar2 = (myVar2 + 27) % 8 <<> 5;
+	if (myVar2 < 10)
+		myVar = myVar2*2;
+	else if (myVar < 20) {
+		myVar = 6;
+		myVar2 = 3;
+	} else if (myVar < 80)
+		myVar = 20;
+	else
+		myVar = myVar2/2;
+	myVar2 = myVar + 5;
+
+	while (myVar > 0) {
+		myVar2 = myVar2 * 3;
+		myVar = myVar - 1;
+	}
+
+	
+	myVar = myVar2/200;
+
+	return 0;
+}
+

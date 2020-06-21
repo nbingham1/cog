@@ -1,0 +1,49 @@
+struct myStruct
+{
+	int32 v1;
+	uint32 v2;
+	float32 v3;
+}
+
+int32 main();
+
+int32 test(int32 myVar)
+{
+	int32 myVar2;
+	myVar2 = myVar + 2;
+	return myVar2;
+}
+
+int32 main()
+{
+	int32 myVar;
+	myVar = 5;
+	int32 myVar2;
+	myVar2 = myVar + 2;
+	myVar2 = (myVar2 + 27) % 8 <<> 5;
+	if (myVar2 < 10)
+		myVar = myVar2*2;
+	else if (myVar < 20) {
+		myVar = 6;
+		myVar2 = 3;
+	} else if (myVar < 80)
+		myVar = 20;
+	else
+		myVar = myVar2/2;
+	myVar2 = myVar + 5;
+
+	while (myVar > 0) {
+		myVar2 = myVar2 * 3;
+		myVar = myVar - 1;
+	}
+
+	
+	test(myVar);
+	
+	myVar = myVar2/200;
+
+	myVar += 25;
+
+	return 0;
+}
+

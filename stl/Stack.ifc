@@ -1,0 +1,25 @@
+typename ValueType;
+
+interface Node<ValueType>
+{
+	construct(ValueType value, Node<ValueType> prev*);
+
+	void push(Node<ValueType> list*);
+	Node<ValueType>* pop();
+	ValueType get();
+}
+
+interface Stack<ValueType>
+{
+	void push(ValueType value);
+	void drop();
+	ValueType get();
+}
+
+ValueType Stack<ValueType>::pop()
+{
+	ValueType result = get();
+	drop();
+	return result;
+}
+

@@ -1,4 +1,5 @@
 #include "Type.h"
+#include "Symbol.h"
 #include "Compiler.h"
 
 #include <llvm/IR/Type.h>
@@ -9,10 +10,12 @@
 
 #include <sstream>
 
-extern Cog::Compiler cog;
+extern Cog::Compiler compile;
 
 namespace Cog
 {
+
+Type::Table Type::table;
 
 Type::Type()
 {
@@ -28,23 +31,89 @@ llvm::Value *Type::undefValue() const
 	return llvm::UndefValue::get(llvmType);
 }
 
-Declaration::Declaration()
+Type *Type::define(Type *t)
 {
+	std::pair<Type::Table::iterator, bool> result = Type::table.insert(std::pair<std::string, Type*>(t->name(), t));
+	return result.first->second;
 }
 
-Declaration::Declaration(Type *type, std::string name)
+Type *Type::find(std::string name)
 {
-	this->type = type;
-	this->name = name;
-}
+	Type::Table::iterator result = table.find(name);
+	if (result != table.end()) {
+		return result->second;
+	// Check base types before giving up
+	} else if (name == "void") {
+		return define(new Void());
+	} else if (name == "bool") {
+		return define(new Boolean());
+	} else {
+		// set default values
+		bool isSigned = true;
+		int bitwidth = 0;
+		int exponent = 0;
+		bool isFloat = false;
 
-Declaration::~Declaration()
-{
+		int idx = 0;
+
+		// check unsigned or not
+		if (1 <= (int)name.size() && name[idx] == 'u') {
+			isSigned = false;
+			++idx;
+		}
+		
+		// parse keyword (int/fixed/float)
+		if (idx+3 <= (int)name.size() && strncmp(name.c_str()+idx, "int", 3) == 0) {
+			idx += 3;
+		} else if (idx+5 <= (int)name.size() && strncmp(name.c_str()+idx, "fixed", 5) == 0) {
+			idx += 5;
+		} else if (idx+5 <= (int)name.size() && strncmp(name.c_str()+idx, "float", 5) == 0) {
+			isFloat = true;
+			idx += 5;
+		} else {
+			return NULL;
+		}
+
+		// parse bitwidth
+		while (idx < (int)name.size() &&
+					 name[idx] >= '0' && name[idx] <= '9') {
+			bitwidth = bitwidth*10 + name[idx] - '0';
+			++idx;
+		}
+
+		// parse exponent
+		if (!isFloat && idx < (int)name.size() && name[idx] == 'e') {
+			++idx;
+			bool negative = false;
+			if (idx < (int)name.size() && name[idx] == '-') {
+				negative = true;
+				++idx;
+			}
+
+			while (idx < (int)name.size() &&
+						 name[idx] >= '0' && name[idx] <= '9') {
+				exponent = exponent*10 + name[idx] - '0';
+				++idx;
+			}
+
+			if (negative)
+				exponent = -exponent;
+		}
+
+		// check no dangling characters
+		if (idx < (int)name.size()) {
+			return NULL;
+		} else if (isFloat) {
+			return define(new Float(bitwidth));
+		} else {
+			return define(new Fixed(isSigned, bitwidth, exponent));
+		}
+	}
 }
 
 Void::Void()
 {
-	llvmType = llvm::Type::getVoidTy(cog.context);
+	llvmType = llvm::Type::getVoidTy(compile.context);
 }
 
 Void::~Void()
@@ -56,14 +125,19 @@ std::string Void::name() const
 	return "void";
 }
 
+int Void::id() const
+{
+	return typeId;
+}
+
 bool Void::eq(Type *other) const
 {
-	return other->id == id;
+	return other->id() == typeId;
 }
 
 Boolean::Boolean()
 {
-	llvmType = llvm::Type::getInt1Ty(cog.context);
+	llvmType = llvm::Type::getInt1Ty(compile.context);
 }
 
 Boolean::~Boolean()
@@ -75,9 +149,14 @@ std::string Boolean::name() const
 	return "bool";
 }
 
+int Boolean::id() const
+{
+	return typeId;
+}
+
 bool Boolean::eq(Type *other) const
 {
-	return other->id == id;
+	return other->id() == typeId;
 }
 
 Fixed::Fixed(bool isSigned, int bitwidth, int exponent)
@@ -85,7 +164,7 @@ Fixed::Fixed(bool isSigned, int bitwidth, int exponent)
 	this->isSigned = isSigned;
 	this->bitwidth = bitwidth;
 	this->exponent = exponent;
-	this->llvmType = llvm::Type::getIntNTy(cog.context, bitwidth);
+	this->llvmType = llvm::Type::getIntNTy(compile.context, bitwidth);
 }
 
 Fixed::~Fixed()
@@ -98,7 +177,6 @@ std::string Fixed::name() const
 	if (isSigned)
 		result << "u";
 
-	// TODO exponent needs to be base 10
 	if (exponent == 0)
 		result << "int" << bitwidth;
 	else
@@ -106,9 +184,14 @@ std::string Fixed::name() const
 	return result.str();
 }
 
+int Fixed::id() const
+{
+	return typeId;
+}
+
 bool Fixed::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const Fixed *otherFixed = other->get(this);
@@ -125,31 +208,31 @@ Float::Float(int bitwidth)
 		this->sigwidth = 11;
 		this->expmin = -15;
 		this->expmax = 15;
-		this->llvmType = llvm::Type::getHalfTy(cog.context);
+		this->llvmType = llvm::Type::getHalfTy(compile.context);
 		break;
 	case 32:
 		this->sigwidth = 24;
 		this->expmin = -127;
 		this->expmax = 128;
-		this->llvmType = llvm::Type::getFloatTy(cog.context);
+		this->llvmType = llvm::Type::getFloatTy(compile.context);
 		break;
 	case 64:
 		this->sigwidth = 53;
 		this->expmin = -1023;
 		this->expmax = 1024;
-		this->llvmType = llvm::Type::getDoubleTy(cog.context);
+		this->llvmType = llvm::Type::getDoubleTy(compile.context);
 		break;
 	case 80:
 		this->sigwidth = 64;
 		this->expmin = -16383;
 		this->expmax = 16384;
-		this->llvmType = llvm::Type::getX86_FP80Ty(cog.context);
+		this->llvmType = llvm::Type::getX86_FP80Ty(compile.context);
 		break;
 	case 128:
 		this->sigwidth = 113;
 		this->expmin = -16383;
 		this->expmax = 16384;
-		this->llvmType = llvm::Type::getFP128Ty(cog.context);
+		this->llvmType = llvm::Type::getFP128Ty(compile.context);
 		break;
 	default:
 		this->llvmType = NULL;
@@ -157,7 +240,7 @@ Float::Float(int bitwidth)
 		this->sigwidth = 0;
 		this->expmin = 0;
 		this->expmax = 0;
-		error() << "floating point types must be 16, 32, 64, or 128 bits." << std::endl;
+		//std::cout << (parse::fail(lexer, token) << "floating point types must be 16, 32, 64, or 128 bits.");
 	}
 }
 
@@ -172,9 +255,14 @@ std::string Float::name() const
 	return result.str();
 }
 
+int Float::id() const
+{
+	return typeId;
+}
+
 bool Float::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const Float *otherFloat = other->get(this);
@@ -209,9 +297,14 @@ std::string StaticArray::name() const
 	return result.str();
 }
 
+int StaticArray::id() const
+{
+	return typeId;
+}
+
 bool StaticArray::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const StaticArray *otherArray = other->get(this);
@@ -241,15 +334,20 @@ std::string Pointer::name() const
 {
 	std::stringstream result;
 	if (ptrType != NULL)
-		result << ptrType->name() << "@";
+		result << ptrType->name() << "#";
 	else
-		result << "undefined@";
+		result << "undefined#";
 	return result.str();
+}
+
+int Pointer::id() const
+{
+	return typeId;
 }
 
 bool Pointer::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const Pointer *otherPointer = other->get(this);
@@ -264,10 +362,10 @@ Struct::Struct()
 Struct::Struct(std::string typeName)
 {
 	this->typeName = typeName;
-	this->llvmType = llvm::StructType::create(cog.context, typeName);
+	this->llvmType = llvm::StructType::create(compile.context, typeName);
 }
 
-Struct::Struct(std::string typeName, std::vector<Declaration> members)
+Struct::Struct(std::string typeName, std::vector<Symbol> members)
 {
 	std::vector<llvm::Type*> memberTypes;
 	for (int i = 0; i < (int)members.size(); i++) {
@@ -276,7 +374,7 @@ Struct::Struct(std::string typeName, std::vector<Declaration> members)
 
 	this->typeName = typeName;
 	this->members = members;
-	this->llvmType = llvm::StructType::create(cog.context, memberTypes, typeName);
+	this->llvmType = llvm::StructType::create(compile.context, memberTypes, typeName);
 }
 
 Struct::~Struct()
@@ -288,9 +386,14 @@ std::string Struct::name() const
 	return typeName;
 }
 
+int Struct::id() const
+{
+	return typeId;
+}
+
 bool Struct::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const Struct *otherStruct = other->get(this);
@@ -302,15 +405,15 @@ Tuple::Tuple()
 	this->llvmType = NULL;
 }
 
-Tuple::Tuple(std::vector<Declaration> members)
+Tuple::Tuple(std::vector<Type*> members)
 {
 	std::vector<llvm::Type*> memberTypes;
 	for (int i = 0; i < (int)members.size(); i++) {
-		memberTypes.push_back(members[i].type->llvmType);
+		memberTypes.push_back(members[i]->llvmType);
 	}
 
 	this->members = members;
-	this->llvmType = llvm::StructType::get(cog.context, memberTypes);
+	this->llvmType = llvm::StructType::get(compile.context, memberTypes);
 }
 
 Tuple::~Tuple()
@@ -325,8 +428,8 @@ std::string Tuple::name() const
 		if (i != 0)
 			result << ",";
 
-		if (members[i].type != NULL)
-			result << members[i].type->name();
+		if (members[i] != NULL)
+			result << members[i]->name();
 		else
 			result << "undefined";
 	}
@@ -334,9 +437,14 @@ std::string Tuple::name() const
 	return result.str();
 }
 
+int Tuple::id() const
+{
+	return typeId;
+}
+
 bool Tuple::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	const Tuple *otherTuple = other->get(this);
@@ -344,7 +452,7 @@ bool Tuple::eq(Type *other) const
 		return false;
 
 	for (int i = 0; i < (int)members.size(); i++) {
-		if (!members[i].type->eq(otherTuple->members[i].type))
+		if (!members[i]->eq(otherTuple->members[i]))
 			return false;
 	}
 
@@ -358,20 +466,19 @@ Function::Function()
 	thisType = NULL;
 }
 
-Function::Function(Type *retType, Type *thisType, std::string typeName, std::vector<Declaration> args)
+Function::Function(Type *retType, Type *thisType, std::vector<Symbol*> args)
 {
 	std::vector<llvm::Type*> argTypes;
 	if (thisType != NULL)
 		argTypes.push_back(thisType->llvmType);
 
-	for (int i = 0; i < (int)args.size(); i++) {
-		argTypes.push_back(args[i].type->llvmType);
+	for (auto i = args.begin(); i != args.end(); i++) {
+		argTypes.push_back((*i)->type->llvmType);
+		this->args.push_back(**i);
 	}
 
 	this->retType = retType;
 	this->thisType = thisType;
-	this->typeName = typeName;
-	this->args = args;
 	this->llvmType = llvm::FunctionType::get(retType->llvmType, argTypes, false);
 }
 
@@ -383,7 +490,7 @@ std::string Function::name() const
 {
 	std::stringstream result;
 	result << thisType->name() << "::";
-	result << typeName << "(";
+	result << "(";
 	for (int i = 0; i < (int)args.size(); i++) {
 		if (i != 0)
 			result << ",";
@@ -393,9 +500,14 @@ std::string Function::name() const
 	return result.str();
 }
 
+int Function::id() const
+{
+	return typeId;
+}
+
 bool Function::eq(Type *other) const
 {
-	if (other->id != id)
+	if (other->id() != typeId)
 		return false;
 
 	Function *otherFunc = other->get(this);
